@@ -8,7 +8,7 @@ import CesiumMap from "./components/CesiumMap.vue";
 import { waypointsData } from "./data/waypoints";
 
 const cesiumMapRef = ref<ComponentPublicInstance<IComponentCesiumMapExpose> | null>(null);
-const hideMap = ref<boolean>(false);
+const hideMap = ref<boolean>(true);
 const waypointsInterval = ref<ReturnType<typeof setInterval> | undefined>();
 
 const isDark = useDark({
@@ -87,7 +87,7 @@ onUnmounted(() => {
         class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleMap()"
       >
-        {{ !hideMap ? "👁️ Show Map" : "🚫 Hide Map" }}
+        {{ hideMap ? "👁️ Show Map" : "🚫 Hide Map" }}
       </button>
     </div>
   </div>
