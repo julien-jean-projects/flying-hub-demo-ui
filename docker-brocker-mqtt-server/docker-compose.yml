@@ -1,0 +1,25 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: mqtt-broker
+    ports:
+      - "51242:51242" # MQTT
+      - "51241:51241" # WebSocket
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+    restart: unless-stopped
+
+  drone-server:
+    build: ./server
+    container_name: drone-server
+    ports:
+      - "51243:51243" # API vidéo
+    environment:
+      - MQTT_BROKER_URL=mqtt://mqtt-broker:51242
+      - DRONE_SERVER_HTTP_PORT=51243
+    depends_on:
+      - mqtt-broker
+    volumes:
+      - ./server/server.js:/app/server.js
+      - ./server/public:/app/public
+    restart: unless-stopped
