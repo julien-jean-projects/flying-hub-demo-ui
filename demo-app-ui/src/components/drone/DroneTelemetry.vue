@@ -5,10 +5,6 @@ import type { Telemetry } from "../../types/Telemetry";
 
 const telemetry = reactive<Telemetry>({});
 
-function updateDronePosition(lat: number, lon: number, alt: number = 100) {
-  console.log("updateDronePosition:", lat, lon, alt);
-}
-
 const formattedGPS = computed(() => {
   if (!telemetry.gps) return "--";
   return `${telemetry.gps.lat.toFixed(5)}, ${telemetry.gps.lon.toFixed(5)}`;
@@ -21,9 +17,8 @@ const formattedGimbal = computed(() => {
 
 onMounted(async () => {
   await initMQTT();
-  subscribe("drone/telemetry", (data) => {
+  subscribe("drone/telemetry", (data: Telemetry) => {
     Object.assign(telemetry, data);
-    if (data.gps) updateDronePosition(data.gps.lat, data.gps.lon, data.altitude);
   });
 });
 </script>

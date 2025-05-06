@@ -7,6 +7,8 @@ import type { IComponentCesiumMapExpose } from "./types/CesiumMap";
 import CesiumMap from "./components/CesiumMap.vue";
 import DroneWidgetWrapper from "./components/DroneWidgetWrapper.vue";
 import { waypointsData } from "./data/waypoints";
+import { subscribe } from "./services/mqttService";
+import type { Telemetry } from "./types/Telemetry";
 
 const cesiumMapRef = ref<ComponentPublicInstance<IComponentCesiumMapExpose> | null>(null);
 const hideCamera = ref<boolean>(false);
@@ -58,6 +60,20 @@ function initWaypointsDrone() {
 
 onMounted(() => {
   initWaypointsDrone();
+
+  subscribe("drone/telemetry", (data: Telemetry) => {
+    if (data.gps) {
+      console.log(data.gps.lat, data.gps.lon, data.altitude);
+
+      cesiumMapRef.value?.updateDronePoseAndCamera({
+        id: "705694ff7c7aafb",
+        lon: data.gps.lon,
+        lat: data.gps.lat,
+        alt: data.altitude ?? 0,
+        gimbal: { yaw: data.gimbal?.yaw ?? 0, pitch: data.gimbal?.pitch ?? 0 },
+      });
+    }
+  });
 });
 
 onUnmounted(() => {
