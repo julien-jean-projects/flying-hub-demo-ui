@@ -1,0 +1,25 @@
+services:
+  vue-builder:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      - NODE_ENV=production
+    entrypoint: >
+      sh -c "
+        corepack enable &&
+        corepack prepare pnpm@10.10.0 --activate &&
+        pnpm install &&
+        pnpm run cesium:preinstall &&
+        pnpm run build
+      "
+
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "51245:80"
+    volumes:
+      - ./dist:/usr/share/nginx/html:ro
+    depends_on:
+      - vue-builder

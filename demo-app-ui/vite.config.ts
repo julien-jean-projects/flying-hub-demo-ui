@@ -6,4 +6,9 @@ import cesium from "vite-plugin-cesium";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(), tailwindcss(), cesium()],
+  server: {
+    host: "0.0.0.0",
+    port: 5173,
+    allowedHosts: ["webserver.naskot.fr"],
+  },
 });
