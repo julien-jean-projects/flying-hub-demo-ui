@@ -1,0 +1,7 @@
+{
+  "typescript.tsdk": "next-app/node_modules/typescript/lib",
+  "editor.wordWrap": "on",
+  "editor.rulers": [120],
+  "prettier.printWidth": 120,
+  "editor.formatOnSave": true
+}

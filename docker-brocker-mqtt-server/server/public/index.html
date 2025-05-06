@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>MQTT Drone informations (Live Simulation)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  </head>
+  <body class="bg-gray-900 text-white">
+    <h1 class="text-center text-2xl font-bold my-4">MQTT Drone informations (Live Simulation)</h1>
+    <video id="video" class="block mx-auto rounded" width="640" autoplay muted></video>
+
+    <div class="mt-6 text-center space-y-2">
+      <h3>Battery: <span id="battery">--</span>%</h3>
+      <h3>Signal: <span id="signal">--</span>/5</h3>
+      <h3>GPS: <span id="gps">--</span></h3>
+      <h3>Altitude: <span id="alt">--</span> m</h3>
+      <h3>Gimbal: <span id="gimbal">--</span></h3>
+    </div>
+
+    <script>
+      const HOSTNAME_DRONE_SERVER = "www.example.local";
+
+      function updateDronePosition(lat, lon, alt = 100) {
+        console.log("updateDronePosition: ", lat, lon, alt);
+      }
+
+      const client = mqtt.connect(`ws://${HOSTNAME_DRONE_SERVER}:51241`);
+      const videoElement = document.getElementById("video");
+
+      client.on("connect", () => {
+        console.log("Connected to MQTT broker");
+        client.subscribe("drone/video");
+        client.subscribe("drone/telemetry");
+        requestPlayVideo();
+      });
+
+      client.on("message", (topic, message) => {
+        const data = JSON.parse(message.toString());
+
+        if (topic === "drone/video") {
+          videoElement.src = `http://${HOSTNAME_DRONE_SERVER}:51243${data.url}`;
+          videoElement.play();
+        }
+
+        if (topic === "drone/telemetry") {
+          document.getElementById("battery").textContent = data.battery;
+          document.getElementById("signal").textContent = data.signal;
+          document.getElementById("gps").textContent = `${data.gps.lat.toFixed(5)}, ${data.gps.lon.toFixed(5)}`;
+          document.getElementById("alt").textContent = data.altitude;
+          document.getElementById("gimbal").textContent = `yaw ${data.gimbal.yaw}°, pitch ${data.gimbal.pitch}°`;
+
+          updateDronePosition(data.gps.lat, data.gps.lon, data.altitude);
+        }
+      });
+
+      function requestPlayVideo() {
+        fetch(`http://${HOSTNAME_DRONE_SERVER}:51243/camera-play`)
+          .then((res) => res.text())
+          .then(console.log);
+      }
+    </script>
+  </body>
+</html>
