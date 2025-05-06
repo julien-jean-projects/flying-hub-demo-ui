@@ -5,9 +5,11 @@ import type { ComponentPublicInstance } from "vue";
 import type { IComponentCesiumMapExpose } from "./types/CesiumMap";
 
 import CesiumMap from "./components/CesiumMap.vue";
+import DroneWidgetWrapper from "./components/DroneWidgetWrapper.vue";
 import { waypointsData } from "./data/waypoints";
 
 const cesiumMapRef = ref<ComponentPublicInstance<IComponentCesiumMapExpose> | null>(null);
+const hideCamera = ref<boolean>(false);
 const hideMap = ref<boolean>(false);
 const waypointsInterval = ref<ReturnType<typeof setInterval> | undefined>();
 
@@ -19,7 +21,7 @@ const isDark = useDark({
 });
 
 const toggleDark = useToggle(isDark);
-
+const toggleCamera = () => (hideCamera.value = !hideCamera.value);
 const toggleMap = () => (hideMap.value = !hideMap.value);
 
 function initWaypointsDrone() {
@@ -67,6 +69,8 @@ onUnmounted(() => {
   <div class="w-full h-screen overflow-hidden">
     <CesiumMap ref="cesiumMapRef" v-show="!hideMap" />
 
+    <DroneWidgetWrapper v-show="!hideCamera" />
+
     <div class="absolute bottom-2.5 right-2.5 z-50 flex flex-col gap-2 min-w-40">
       <button
         v-show="!hideMap"
@@ -85,9 +89,16 @@ onUnmounted(() => {
 
       <button
         class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        @click="toggleCamera()"
+      >
+        {{ hideCamera ? "🎥 Show Camera" : "📹 Hide Camera" }}
+      </button>
+
+      <button
+        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleMap()"
       >
-        {{ !hideMap ? "👁️ Show Map" : "🚫 Hide Map" }}
+        {{ hideMap ? "👁️ Show Map" : "🚫 Hide Map" }}
       </button>
     </div>
   </div>
