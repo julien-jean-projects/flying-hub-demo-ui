@@ -116,7 +116,7 @@ function getCameraDirectionVector(yawDeg: number, pitchDeg: number): Cesium.Cart
   return new Cesium.Cartesian3(x, y, z);
 }
 
-const updateDronePoseAndCamera: IUpdateDronePoseAndCamera = ({ id, lon, lat, alt, gimbal }) => {
+const updateDronePoseAndCamera: IUpdateDronePoseAndCamera = ({ lon, lat, alt, gimbal }) => {
   const position = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
   if (droneEntity.value) {
     droneEntity.value.position = new Cesium.ConstantPositionProperty(position);
