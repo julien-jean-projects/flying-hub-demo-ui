@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, withDefaults } from "vue";
+import { ref, reactive, withDefaults, watch } from "vue";
 import { useDraggable, useEventListener, useMousePressed } from "@vueuse/core";
 
 interface Props {
@@ -23,7 +23,6 @@ const { isDragging } = useDraggable(containerRef, {
   },
 });
 
-// window JS resize part
 const { pressed } = useMousePressed();
 
 function onMouseDownResize(e: MouseEvent) {
@@ -53,6 +52,12 @@ useEventListener(window, "mousemove", (e: MouseEvent) => {
 useEventListener(window, "mouseup", () => {
   resizeState.isResizing = false;
 });
+
+// deselect any selected element to avoid the drag-and-drop & resize window bug
+watch(
+  () => resizeState.isResizing || isDragging.value,
+  () => window.getSelection()?.removeAllRanges()
+);
 </script>
 
 <template>
@@ -80,8 +85,10 @@ useEventListener(window, "mouseup", () => {
     </div>
 
     <!-- Content -->
-    <div class="p-4">
-      <slot />
+    <div class="flex flex-col h-[calc(100%-2.5rem)]">
+      <div class="p-4 overflow-auto grow">
+        <slot />
+      </div>
     </div>
 
     <!-- Resize Handle Visual -->
