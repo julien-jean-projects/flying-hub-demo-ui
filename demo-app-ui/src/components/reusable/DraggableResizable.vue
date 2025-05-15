@@ -15,7 +15,7 @@ const dimensions = reactive({ width: props.initialWidth, height: props.initialHe
 const resizeState = reactive({ isResizing: false, startX: 0, startY: 0, startWidth: 0, startHeight: 0 });
 const position = reactive({ x: 100, y: 100 });
 
-useDraggable(containerRef, {
+const { isDragging } = useDraggable(containerRef, {
   handle: handleRef,
   onMove: ({ x, y }) => {
     position.x = x;
@@ -60,7 +60,7 @@ useEventListener(window, "mouseup", () => {
     ref="containerRef"
     :class="[
       'fixed bg-white dark:bg-gray-800 dark:text-white rounded-lg border border-gray-600 shadow-lg',
-      { 'select-none': resizeState.isResizing },
+      { 'select-none': resizeState.isResizing || isDragging },
     ]"
     :style="{
       width: dimensions.width + 'vw',
