@@ -10,9 +10,10 @@ services:
       sh -c "
         corepack enable &&
         corepack prepare pnpm@10.10.0 --activate &&
-        pnpm install &&
+        CI=true pnpm install &&
         pnpm run cesium:preinstall &&
-        pnpm run build
+        pnpm run build &&
+        echo 'keep vue-builder container alive' ; tail -f /dev/null
       "
 
   nginx:
