@@ -15,3 +15,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - N/A
+
+## [v0.2.1]
+
+### Fixed
+- Prevented the `vue-builder` container from exiting immediately after build by appending `tail -f /dev/null` to the entrypoint. (#1)
+- Fixed `cesium:preinstall` script failure when `node_modules` was not present, ensuring robust dependency setup during container build. (#2)
+- Added `.pnpm-store` to `.gitignore` to prevent accidental version control tracking of local package cache. (#3)
+- Solved startup blocking issue in `vue-builder` when `node_modules` directory already existed by forcing `CI=true` during `pnpm install`. (#4)
