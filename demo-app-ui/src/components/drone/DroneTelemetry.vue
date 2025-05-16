@@ -12,7 +12,8 @@ const formattedGPS = computed(() => {
 
 const formattedGimbal = computed(() => {
   if (!telemetry.gimbal) return "--";
-  return `yaw ${telemetry.gimbal.yaw}°, pitch ${telemetry.gimbal.pitch}°`;
+  const { yaw, pitch, fov } = telemetry.gimbal;
+  return `yaw ${yaw}°, pitch ${pitch}°, FOV ${fov}°`;
 });
 
 onMounted(async () => {

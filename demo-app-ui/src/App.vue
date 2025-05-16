@@ -32,7 +32,7 @@ function initWaypointsDrone() {
     lon: 2.36145,
     lat: 48.8592121,
     alt: 154,
-    gimbal: { yaw: -70, pitch: -10 },
+    gimbal: { yaw: -70, pitch: -10, fov: 70 },
   });
 
   cesiumMapRef.value?.addWaypoint({
@@ -40,7 +40,7 @@ function initWaypointsDrone() {
     lon: 2.4,
     lat: 48.85,
     alt: 100,
-    gimbal: { yaw: 90, pitch: -10 },
+    gimbal: { yaw: 90, pitch: -10, fov: 70 },
   });
 
   let index = 0;
@@ -70,7 +70,7 @@ onMounted(() => {
         lon: data.gps.lon,
         lat: data.gps.lat,
         alt: data.altitude ?? 0,
-        gimbal: { yaw: data.gimbal?.yaw ?? 0, pitch: data.gimbal?.pitch ?? 0 },
+        gimbal: { yaw: data.gimbal?.yaw ?? 0, pitch: data.gimbal?.pitch ?? 0, fov: data.gimbal?.fov ?? 0 },
       });
     }
   });

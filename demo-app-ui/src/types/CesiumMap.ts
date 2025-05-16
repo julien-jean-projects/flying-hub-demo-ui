@@ -8,6 +8,7 @@ export interface IWaypoint {
   gimbal: {
     yaw: number;
     pitch: number;
+    fov: number;
   };
 }
 
