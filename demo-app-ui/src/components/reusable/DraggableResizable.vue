@@ -92,12 +92,10 @@ watch(
     </div>
 
     <!-- Resize Handle Visual -->
-    <div v-show="resize" class="absolute bottom-1 right-1 cursor-nwse-resize" @mousedown="onMouseDownResize">
-      <div class="w-4 h-4 flex flex-col justify-end items-end text-gray-500 rotate-0">
-        <div class="w-3 h-0.5 bg-gray-500 mb-0.5 rounded"></div>
-        <div class="w-2 h-0.5 bg-gray-500 mb-0.5 rounded"></div>
-        <div class="w-1 h-0.5 bg-gray-500 rounded"></div>
-      </div>
+    <div v-show="resize" class="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize" @mousedown="onMouseDownResize">
+      <svg class="w-full h-full text-gray-400" viewBox="0 0 10 10" fill="none">
+        <path d="M10 6L6 10M10 8L8 10M10 4L4 10" stroke="currentColor" stroke-width="1" />
+      </svg>
     </div>
   </div>
 </template>
