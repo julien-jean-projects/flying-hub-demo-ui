@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import * as Cesium from "cesium";
+import { addCameraVisionCone, getCameraDirectionVector } from "../utils/cesiumMap";
 import type {
   IWaypoint,
   IAddWaypoint,
@@ -10,6 +11,7 @@ import type {
   IFocusOnWaypointById,
   IComponentCesiumMapExpose,
   IGetViewerEntityById,
+  IRemoveWaypointAndCone,
 } from "../types/CesiumMap";
 
 import droneImage from "../assets/drone.png";
@@ -28,6 +30,10 @@ const droneEntity = ref<Cesium.Entity | null>(null);
 const cameraRayEntity = ref<Cesium.Entity | null>(null);
 const allPositions = ref<Cesium.Cartesian3[]>([]);
 const isUserLockedOnWaypoint = ref(false);
+const currentConeEntity = ref<Cesium.Entity | null>(null);
+
+// Map to store cone entities associated with waypoints
+const waypointConeEntities = new Map<string, Cesium.Entity>();
 
 // Initialisation Cesium
 onMounted(() => {
@@ -107,14 +113,6 @@ onMounted(() => {
 });
 
 // Fonctions
-function getCameraDirectionVector(yawDeg: number, pitchDeg: number): Cesium.Cartesian3 {
-  const yaw = Cesium.Math.toRadians(yawDeg);
-  const pitch = Cesium.Math.toRadians(pitchDeg);
-  const x = Math.cos(pitch) * Math.sin(yaw);
-  const y = Math.cos(pitch) * Math.cos(yaw);
-  const z = Math.sin(pitch);
-  return new Cesium.Cartesian3(x, y, z);
-}
 
 const updateDronePoseAndCamera: IUpdateDronePoseAndCamera = ({ lon, lat, alt, gimbal }) => {
   const position = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
@@ -127,6 +125,26 @@ const updateDronePoseAndCamera: IUpdateDronePoseAndCamera = ({ lon, lat, alt, gi
   }
 
   if (gimbal) {
+    // Remove previous cone if exists
+    if (currentConeEntity.value && viewer.value) {
+      viewer.value.entities.remove(currentConeEntity.value);
+      currentConeEntity.value = null;
+    }
+    // Add new cone and keep reference
+    if (viewer.value) {
+      currentConeEntity.value = addCameraVisionCone(viewer.value, {
+        lon,
+        lat,
+        alt,
+        pitch: gimbal.pitch,
+        yaw: gimbal.yaw,
+        color: "yellow",
+        opacity: 0.2,
+        fov: gimbal.fov,
+        zoom: gimbal.zoom,
+      });
+    }
+
     const direction = getCameraDirectionVector(gimbal.yaw, gimbal.pitch);
     const end = Cesium.Cartesian3.add(
       position,
@@ -211,7 +229,6 @@ const addWaypoint: IAddWaypoint = ({ id, lon, lat, alt, gimbal }: IWaypoint, cen
         Cesium.Cartesian3.multiplyByScalar(direction, 50, new Cesium.Cartesian3()),
         new Cesium.Cartesian3()
       );
-
       viewer.value.entities.add({
         name: `Caméra prévue ${id}`,
         polyline: {
@@ -220,11 +237,37 @@ const addWaypoint: IAddWaypoint = ({ id, lon, lat, alt, gimbal }: IWaypoint, cen
           material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.YELLOW),
         },
       });
+
+      const coneEntity = addCameraVisionCone(viewer.value, {
+        lon,
+        lat,
+        alt,
+        pitch: gimbal.pitch,
+        yaw: gimbal.yaw,
+        color: "green",
+        opacity: 0.2,
+        fov: gimbal.fov,
+        zoom: gimbal.zoom,
+      });
+      if (coneEntity) waypointConeEntities.set(id, coneEntity);
     }
 
     if (centerCamera && !isUserLockedOnWaypoint.value) {
       lookAtWaypoint(lon, lat, alt, { distance: 500, heightOffset: 10, pitch: -25, temporary: true });
     }
+  }
+};
+
+const removeWaypointAndCone: IRemoveWaypointAndCone = (id: string) => {
+  if (!viewer.value) return;
+
+  const entity = viewer.value.entities.getById(id);
+  if (entity) viewer.value.entities.remove(entity);
+
+  const coneEntity = waypointConeEntities.get(id);
+  if (coneEntity) {
+    viewer.value.entities.remove(coneEntity);
+    waypointConeEntities.delete(id);
   }
 };
 
@@ -266,6 +309,7 @@ defineExpose<IComponentCesiumMapExpose>({
   addWaypoint,
   selectWaypointEntity,
   focusOnWaypointById,
+  removeWaypointAndCone,
 });
 </script>
 

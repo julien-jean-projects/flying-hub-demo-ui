@@ -9,6 +9,7 @@ export interface IWaypoint {
     yaw: number;
     pitch: number;
     fov: number;
+    zoom?: number;
   };
 }
 
@@ -19,10 +20,31 @@ export interface IComponentCesiumMapExpose {
   lookAtWaypoint: ILookAtWaypoint;
   selectWaypointEntity: ISelectWaypointEntity;
   focusOnWaypointById: IFocusOnWaypointById;
+  removeWaypointAndCone: IRemoveWaypointAndCone;
 }
 
 export interface IAddWaypoint {
   (waypoint: IWaypoint, centerCamera?: boolean): void;
+}
+
+export interface ICreateCone {
+  (
+    viewer: Cesium.Viewer,
+    params: {
+      lon: number;
+      lat: number;
+      alt: number;
+      pitch: number;
+      yaw: number;
+
+      fov: number; // example: FOV of DJI Mavic Pro is 68
+      zoom?: number; // zoom level
+      range?: number; // camera distance
+
+      color?: string;
+      opacity?: number;
+    }
+  ): Cesium.Entity;
 }
 
 export interface IUpdateDronePoseAndCamera {
@@ -53,5 +75,9 @@ export interface ISelectWaypointEntity {
 }
 
 export interface IFocusOnWaypointById {
+  (id: string): void;
+}
+
+export interface IRemoveWaypointAndCone {
   (id: string): void;
 }
