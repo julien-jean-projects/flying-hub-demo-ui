@@ -17,14 +17,14 @@ client.on("connect", () => {
 app.use(express.static(path.join(__dirname, "public")));
 
 const waypoints = [
-  { id: "c509a6f75849b", lon: 2.36, lat: 48.86, alt: 20, gimbal: { yaw: 120, pitch: -10, fov: 68 } },
-  { id: "67f89cc14862c", lon: 2.365, lat: 48.862, alt: 50, gimbal: { yaw: 135, pitch: -20, fov: 72 } },
-  { id: "08fd9f2a7baf3", lon: 2.37, lat: 48.861, alt: 80, gimbal: { yaw: 150, pitch: -15, fov: 65 } },
-  { id: "1a67b7542122c", lon: 2.375, lat: 48.859, alt: 280, gimbal: { yaw: 160, pitch: -25, fov: 75 } },
-  { id: "72b0674a318d5", lon: 2.38, lat: 48.857, alt: 60, gimbal: { yaw: 140, pitch: -10, fov: 69 } },
-  { id: "5e6087eb1b2dc", lon: 2.385, lat: 48.855, alt: 40, gimbal: { yaw: 130, pitch: -5, fov: 71 } },
-  { id: "6dedd4bea2543", lon: 2.39, lat: 48.853, alt: 70, gimbal: { yaw: 125, pitch: -8, fov: 67 } },
-  { id: "51fd0297e236d", lon: 2.395, lat: 48.851, alt: 30, gimbal: { yaw: 115, pitch: -12, fov: 73 } },
+  { id: "c509a6f75849b", lon: 2.36, lat: 48.86, alt: 20, gimbal: { yaw: 0, pitch: -10, fov: 68 } },
+  { id: "67f89cc14862c", lon: 2.365, lat: 48.862, alt: 50, gimbal: { yaw: 45, pitch: -20, fov: 68 } },
+  { id: "08fd9f2a7baf3", lon: 2.37, lat: 48.861, alt: 80, gimbal: { yaw: 315, pitch: -12, fov: 68 } },
+  { id: "1a67b7542122c", lon: 2.375, lat: 48.859, alt: 280, gimbal: { yaw: 135, pitch: -25, fov: 68 } },
+  { id: "72b0674a318d5", lon: 2.38, lat: 48.857, alt: 60, gimbal: { yaw: 180, pitch: -10, fov: 68 } },
+  { id: "5e6087eb1b2dc", lon: 2.385, lat: 48.855, alt: 40, gimbal: { yaw: 225, pitch: -5, fov: 68, zoom: 5 } },
+  { id: "6dedd4bea2543", lon: 2.39, lat: 48.853, alt: 70, gimbal: { yaw: 270, pitch: -8, fov: 68, zoom: 5 } },
+  { id: "51fd0297e236d", lon: 2.395, lat: 48.851, alt: 30, gimbal: { yaw: 315, pitch: -12, fov: 68 } },
 ];
 
 let telemetryTimer = null;
