@@ -91,7 +91,7 @@ onUnmounted(() => {
       <button
         v-show="!hideMap"
         class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
-        @click="cesiumMapRef?.focusOnWaypointById('5')"
+        @click="cesiumMapRef?.focusOnWaypointById('5e6087eb1b2dc')"
       >
         🔍 Go to Waypoint 5
       </button>
