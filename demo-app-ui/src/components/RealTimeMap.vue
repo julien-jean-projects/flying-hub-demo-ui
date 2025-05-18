@@ -2,7 +2,6 @@
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import type { ComponentPublicInstance } from "vue";
 import CesiumMap from "./CesiumMap.vue";
-import { waypointsData } from "../data/waypoints";
 import { subscribe, initMQTT, unsubscribe } from "../services/mqttService";
 import type { IComponentCesiumMapExpose } from "../types/CesiumMap";
 import type { Telemetry } from "../types/Telemetry";
@@ -12,14 +11,12 @@ const apiUrl = import.meta.env.VITE_API_URL;
 const props = defineProps<{ hideMap?: boolean }>();
 
 const cesiumMapRef = ref<ComponentPublicInstance<IComponentCesiumMapExpose> | null>(null);
-const waypointsInterval = ref<ReturnType<typeof setInterval> | undefined>();
 
 async function fetchDronesFromAPI() {
   try {
     const res = await fetch(`${apiUrl}/api/drones`);
     if (!res.ok) throw new Error("Erreur API");
     const data = await res.json();
-
     data.forEach((drone: any) => {
       cesiumMapRef.value?.addDrone(drone);
     });
@@ -28,27 +25,24 @@ async function fetchDronesFromAPI() {
   }
 }
 
-function initWaypointsDrone() {
-  let index = 0;
-  cesiumMapRef.value?.addWaypoint(waypointsData[index], true);
-  index++;
-
-  waypointsInterval.value = setInterval(() => {
-    if (index >= waypointsData.length) {
-      clearInterval(waypointsInterval.value);
-      return;
+async function fetchWaypointsFromAPI() {
+  try {
+    const res = await fetch(`${apiUrl}/api/waypoints/mission-1`);
+    if (!res.ok) throw new Error("Erreur API waypoints");
+    const waypoints = await res.json();
+    if (Array.isArray(waypoints)) {
+      waypoints.forEach((wp: any, idx: number) => {
+        cesiumMapRef.value?.addWaypoint(wp, idx === 0);
+      });
     }
-    cesiumMapRef.value?.addWaypoint(waypointsData[index]);
-
-    index++;
-  }, 1000);
+  } catch (e) {
+    console.error("Erreur lors de la récupération des waypoints:", e);
+  }
 }
 
 function subscribeMQTT() {
   subscribe("drone/telemetry", (data: Telemetry) => {
     if (data.gps) {
-      console.log(data.gps.lat, data.gps.lon, data.altitude);
-
       cesiumMapRef.value?.updateDronePoseAndCamera({
         id: "705694ff7c7aafb",
         lon: data.gps.lon,
@@ -82,16 +76,14 @@ watch(
 onMounted(async () => {
   await initMQTT();
 
-  initWaypointsDrone();
-  fetchDronesFromAPI();
+  await fetchWaypointsFromAPI();
+  await fetchDronesFromAPI();
 
   subscribeMQTT();
 });
 
 onUnmounted(() => {
   unsubscribeMQTT();
-
-  clearInterval(waypointsInterval.value);
 });
 </script>
 

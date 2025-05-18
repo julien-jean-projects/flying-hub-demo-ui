@@ -32,6 +32,12 @@ const drones = [
   { id: "drone-2", lon: 2.3585, lat: 48.86, alt: 120, gimbal: { yaw: 30, pitch: -45, fov: 68, zoom: 5 } },
 ];
 
+const missions = [
+  { id: "mission-1", waypoints, description: "Inspection Tour Eiffel", authorId: 1 },
+  { id: "mission-2", waypoints, description: "Surveillance Seine", authorId: 1 },
+  { id: "mission-3", waypoints, description: "Patrouille Quartier Latin", authorId: 2 },
+];
+
 app.use(express.json());
 
 app.get("/api/drones", (req, res) => {
@@ -120,8 +126,14 @@ app.get("/camera-play", (req, res) => {
   res.send(`Video ${source} sent with ${waypoints.length} points over 32s`);
 });
 
-app.get("/waypoints", (req, res) => {
-  res.json(waypoints);
+app.get("/api/waypoints", (req, res) => {
+  res.json(missions);
+});
+
+app.get("/api/waypoints/:id", (req, res) => {
+  const mission = missions.find((m) => m.id === req.params.id);
+  if (!mission) return res.status(404).json({ error: "Mission not found" });
+  res.json(mission.waypoints);
 });
 
 const port = parseInt(process.env.DRONE_SERVER_HTTP_PORT || 3000);
