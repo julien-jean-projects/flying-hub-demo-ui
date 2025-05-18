@@ -53,6 +53,7 @@ onMounted(() => {
 
     if (viewer.value) {
       viewer.value.entities.add({
+        description: "___UNSELECTABLE___",
         polyline: {
           positions: new Cesium.CallbackProperty(() => allPositions.value, false),
           width: 4,
@@ -66,15 +67,21 @@ onMounted(() => {
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.value.scene.canvas);
       handler.setInputAction((movement: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
         const picked = viewer.value?.scene.pick(movement.position);
-        if (Cesium.defined(picked) && picked.id) selectWaypointEntity(picked.id);
-        else if (viewer.value) viewer.value.selectedEntity = undefined;
+        if (Cesium.defined(picked) && picked.id) {
+          selectWaypointEntity(picked.id);
+        } else if (viewer.value) {
+          viewer.value.selectedEntity = undefined;
+        }
       }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-      viewer.value.selectedEntityChanged.addEventListener((selectedEntity: Cesium.Entity | undefined) => {
-        if (!selectedEntity && isUserLockedOnWaypoint.value && viewer.value) {
+      // If an entity has a ___UNSELECTABLE___ description, clear the selection
+      viewer.value?.selectedEntityChanged.addEventListener((e) => {
+        if (!e) {
           isUserLockedOnWaypoint.value = false;
-          viewer.value.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+          viewer.value?.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
         }
+        if (e && (e.description?.getValue?.() ?? e.description) === "___UNSELECTABLE___")
+          viewer.value!.selectedEntity = undefined;
       });
 
       if (viewer.value) {
@@ -189,6 +196,7 @@ const addWaypoint: IAddWaypoint = ({ id, lon, lat, alt, gimbal }: IWaypoint, cen
       );
       viewer.value.entities.add({
         name: `Caméra prévue ${id}`,
+        description: "___UNSELECTABLE___",
         polyline: {
           positions: [position, end],
           width: 48,
@@ -207,7 +215,10 @@ const addWaypoint: IAddWaypoint = ({ id, lon, lat, alt, gimbal }: IWaypoint, cen
         fov: gimbal.fov,
         zoom: gimbal.zoom,
       });
-      if (coneEntity) waypointConeEntities.set(id, coneEntity);
+      if (coneEntity) {
+        coneEntity.description = new Cesium.ConstantProperty("___UNSELECTABLE___");
+        waypointConeEntities.set(id, coneEntity);
+      }
     }
 
     if (centerCamera && !isUserLockedOnWaypoint.value) {
@@ -230,6 +241,11 @@ const removeWaypointAndCone: IRemoveWaypointAndCone = (id: string) => {
 };
 
 const selectWaypointEntity: ISelectWaypointEntity = (entity) => {
+  if ((entity.description?.getValue?.() ?? entity.description) === "___UNSELECTABLE___") {
+    isUserLockedOnWaypoint.value = false;
+    return;
+  }
+
   if (!entity || !entity.position || !viewer.value) return;
   const carto = Cesium.Cartographic.fromCartesian(
     entity.position.getValue(Cesium.JulianDate.now()) as Cesium.Cartesian3
@@ -337,7 +353,6 @@ function updateDroneVision(
     arrowEntity = droneVisionEntities.get(droneId)!.arrow;
     arrowEntity.polyline!.positions = new Cesium.ConstantProperty([position, end]);
     coneEntity = droneVisionEntities.get(droneId)!.cone;
-    // Pour le cône, il faut le supprimer et le recréer pour mettre à jour la direction/FOV
     viewer.value.entities.remove(coneEntity);
     coneEntity = addCameraVisionCone(viewer.value, {
       lon: drone.lon,
@@ -354,6 +369,7 @@ function updateDroneVision(
     // Création initiale
     arrowEntity = viewer.value.entities.add({
       name: `Camera Direction ${droneId}`,
+      description: "___UNSELECTABLE___",
       polyline: {
         positions: [position, end],
         width: 48,
@@ -371,6 +387,7 @@ function updateDroneVision(
       fov: drone.gimbal.fov,
       zoom: drone.gimbal.zoom,
     });
+    if (coneEntity) coneEntity.description = new Cesium.ConstantProperty("___UNSELECTABLE___");
   }
   droneVisionEntities.set(droneId, { arrow: arrowEntity, cone: coneEntity });
 }
