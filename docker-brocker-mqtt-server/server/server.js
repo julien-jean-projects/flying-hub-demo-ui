@@ -62,6 +62,16 @@ app.delete("/api/drones/:id", (req, res) => {
   res.json({ ok: true });
 });
 
+app.put("/api/drones/:id", (req, res) => {
+  const { id } = req.params;
+  const idx = drones.findIndex((d) => d.id === id);
+  if (idx === -1) return res.status(404).json({ error: "not found" });
+  const update = req.body;
+  drones[idx] = { ...drones[idx], ...update, id };
+  client.publish("drones/updated", JSON.stringify(drones[idx]));
+  res.json({ ok: true, drone: drones[idx] });
+});
+
 // testing ... adds and removes every 5 seconds to test MQTT
 setInterval(() => {
   const idx = drones.findIndex((d) => d.id === "drone-3");
