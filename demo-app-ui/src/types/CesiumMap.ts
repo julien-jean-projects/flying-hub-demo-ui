@@ -21,6 +21,14 @@ export interface IComponentCesiumMapExpose {
   selectWaypointEntity: ISelectWaypointEntity;
   focusOnWaypointById: IFocusOnWaypointById;
   removeWaypointAndCone: IRemoveWaypointAndCone;
+  addDrone: (drone: {
+    id: string;
+    lon: number;
+    lat: number;
+    alt: number;
+    gimbal?: { yaw: number; pitch: number; fov: number; zoom?: number };
+  }) => void;
+  removeDrone: (droneId: string) => void;
 }
 
 export interface IAddWaypoint {

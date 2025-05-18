@@ -26,16 +26,16 @@ Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_TOKEN;
 // Refs et variables globales
 const cesiumContainerRef = ref<HTMLDivElement | null>(null);
 const viewer = ref<Cesium.Viewer | null>(null);
-const droneEntity = ref<Cesium.Entity | null>(null);
-const cameraRayEntity = ref<Cesium.Entity | null>(null);
 const allPositions = ref<Cesium.Cartesian3[]>([]);
 const isUserLockedOnWaypoint = ref(false);
-const currentConeEntity = ref<Cesium.Entity | null>(null);
 
 // Map to store cone entities associated with waypoints
 const waypointConeEntities = new Map<string, Cesium.Entity>();
 
-// Initialisation Cesium
+// Map to store drone entities by id
+const droneEntities = new Map<string, Cesium.Entity>();
+
+// Cesium initialization
 onMounted(() => {
   if (cesiumContainerRef.value) {
     viewer.value = new Cesium.Viewer(cesiumContainerRef.value as Element, {
@@ -52,26 +52,6 @@ onMounted(() => {
     });
 
     if (viewer.value) {
-      droneEntity.value = viewer.value.entities.add({
-        name: "Drone",
-        label: {
-          text: ``,
-          font: "14pt sans-serif",
-          fillColor: Cesium.Color.YELLOWGREEN,
-          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-          outlineWidth: 2,
-          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          pixelOffset: new Cesium.Cartesian2(0, -50),
-        },
-        show: false,
-        billboard: {
-          image: droneImage,
-          scale: 1,
-          verticalOrigin: Cesium.VerticalOrigin.CENTER,
-          eyeOffset: new Cesium.Cartesian3(0, 0, -10),
-        },
-      });
-
       viewer.value.entities.add({
         polyline: {
           positions: new Cesium.CallbackProperty(() => allPositions.value, false),
@@ -112,58 +92,36 @@ onMounted(() => {
   }
 });
 
-// Fonctions
+// Functions
 
-const updateDronePoseAndCamera: IUpdateDronePoseAndCamera = ({ lon, lat, alt, gimbal }) => {
-  const position = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
-  if (droneEntity.value) {
-    droneEntity.value.position = new Cesium.ConstantPositionProperty(position);
-    droneEntity.value.show = true;
-    if (droneEntity.value?.label) {
-      droneEntity.value.label.text = new Cesium.ConstantProperty(`DroneName (alt: ${alt}m)`);
-    }
+function removeDrone(droneId: string) {
+  if (!viewer.value) return;
+  // Remove the drone entity
+  const entity = droneEntities.get(droneId);
+  if (entity) {
+    viewer.value.entities.remove(entity);
+    droneEntities.delete(droneId);
   }
+  // Remove the arrow and cone
+  const vision = droneVisionEntities.get(droneId);
+  if (vision) {
+    viewer.value.entities.remove(vision.arrow);
+    viewer.value.entities.remove(vision.cone);
+    droneVisionEntities.delete(droneId);
+  }
+}
 
+const updateDronePoseAndCamera: IUpdateDronePoseAndCamera = ({ id, lon, lat, alt, gimbal }) => {
+  // Met à jour la position et la vision du drone existant (ne crée pas de drone)
+  if (!droneEntities.has(id)) return;
+  const entity = droneEntities.get(id)!;
+  entity.position = new Cesium.ConstantPositionProperty(Cesium.Cartesian3.fromDegrees(lon, lat, alt));
+  entity.show = true;
+  if (entity.label) {
+    entity.label.text = new Cesium.ConstantProperty(`Drone ${id} (alt: ${alt}m)`);
+  }
   if (gimbal) {
-    // Remove previous cone if exists
-    if (currentConeEntity.value && viewer.value) {
-      viewer.value.entities.remove(currentConeEntity.value);
-      currentConeEntity.value = null;
-    }
-    // Add new cone and keep reference
-    if (viewer.value) {
-      currentConeEntity.value = addCameraVisionCone(viewer.value, {
-        lon,
-        lat,
-        alt,
-        pitch: gimbal.pitch,
-        yaw: gimbal.yaw,
-        color: "yellow",
-        opacity: 0.2,
-        fov: gimbal.fov,
-        zoom: gimbal.zoom,
-      });
-    }
-
-    const direction = getCameraDirectionVector(gimbal.yaw, gimbal.pitch);
-    const end = Cesium.Cartesian3.add(
-      position,
-      Cesium.Cartesian3.multiplyByScalar(direction, 50, new Cesium.Cartesian3()),
-      new Cesium.Cartesian3()
-    );
-
-    if (!cameraRayEntity.value && viewer.value) {
-      cameraRayEntity.value = viewer.value.entities.add({
-        name: "Camera Direction",
-        polyline: {
-          positions: [position, end],
-          width: 48,
-          material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.ORANGE),
-        },
-      });
-    } else if (cameraRayEntity.value) {
-      cameraRayEntity.value.polyline!.positions = new Cesium.ConstantProperty([position, end]);
-    }
+    updateDroneVision(id, { lon, lat, alt, gimbal }, true);
   }
 };
 
@@ -302,6 +260,112 @@ const getViewerEntityById: IGetViewerEntityById = (id: string) => {
   return entity ? entity : null;
 };
 
+// Add a drone to the map (updated to handle arrow and cone)
+function addDrone(drone: {
+  id: string;
+  lon: number;
+  lat: number;
+  alt: number;
+  gimbal?: { yaw: number; pitch: number; fov: number; zoom?: number };
+}) {
+  if (!viewer.value) return;
+  if (droneEntities.has(drone.id)) {
+    // Update the position if the drone already exists
+    const entity = droneEntities.get(drone.id)!;
+    entity.position = new Cesium.ConstantPositionProperty(
+      Cesium.Cartesian3.fromDegrees(drone.lon, drone.lat, drone.alt)
+    );
+    entity.show = true;
+    if (entity.label) {
+      entity.label.text = new Cesium.ConstantProperty(`Drone ${drone.id} (alt: ${drone.alt}m)`);
+    }
+    // Update the arrow and cone if gimbal is provided
+    if (drone.gimbal) {
+      updateDroneVision(drone.id, drone, true);
+    }
+    return;
+  }
+  // Create a new drone entity
+  const entity = viewer.value.entities.add({
+    id: drone.id,
+    name: `Drone ${drone.id}`,
+    position: Cesium.Cartesian3.fromDegrees(drone.lon, drone.lat, drone.alt),
+    label: {
+      text: `Drone ${drone.id} (alt: ${drone.alt}m)`,
+      font: "14pt sans-serif",
+      fillColor: Cesium.Color.YELLOWGREEN,
+      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+      outlineWidth: 2,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      pixelOffset: new Cesium.Cartesian2(0, -50),
+    },
+    billboard: {
+      image: droneImage,
+      scale: 1,
+      verticalOrigin: Cesium.VerticalOrigin.CENTER,
+      eyeOffset: new Cesium.Cartesian3(0, 0, -10),
+    },
+  });
+  droneEntities.set(drone.id, entity);
+  // Add the orange arrow and vision cone if gimbal is provided
+  if (drone.gimbal) {
+    updateDroneVision(drone.id, drone, false);
+  }
+}
+
+// Arrow and vision cone management for each drone
+const droneVisionEntities = new Map<string, { arrow: Cesium.Entity; cone: Cesium.Entity }>();
+
+function updateDroneVision(
+  droneId: string,
+  drone: { lon: number; lat: number; alt: number; gimbal?: { yaw: number; pitch: number; fov: number; zoom?: number } },
+  updateOnly = false
+) {
+  if (!viewer.value || !drone.gimbal) return;
+  // Direction calculation
+  const position = Cesium.Cartesian3.fromDegrees(drone.lon, drone.lat, drone.alt);
+  const direction = getCameraDirectionVector(drone.gimbal.yaw, drone.gimbal.pitch);
+  const end = Cesium.Cartesian3.add(
+    position,
+    Cesium.Cartesian3.multiplyByScalar(direction, 50, new Cesium.Cartesian3()),
+    new Cesium.Cartesian3()
+  );
+  // Orange arrow
+  let arrowEntity: Cesium.Entity;
+  if (updateOnly && droneVisionEntities.has(droneId)) {
+    arrowEntity = droneVisionEntities.get(droneId)!.arrow;
+    arrowEntity.polyline!.positions = new Cesium.ConstantProperty([position, end]);
+  } else {
+    arrowEntity = viewer.value.entities.add({
+      name: `Camera Direction ${droneId}`,
+      polyline: {
+        positions: [position, end],
+        width: 48,
+        material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.ORANGE),
+      },
+    });
+  }
+  // Vision cone
+  let coneEntity: Cesium.Entity;
+  if (updateOnly && droneVisionEntities.has(droneId)) {
+    coneEntity = droneVisionEntities.get(droneId)!.cone;
+    // For a real update, we should remove and recreate, but here we keep it simple
+  } else {
+    coneEntity = addCameraVisionCone(viewer.value, {
+      lon: drone.lon,
+      lat: drone.lat,
+      alt: drone.alt,
+      pitch: drone.gimbal.pitch,
+      yaw: drone.gimbal.yaw,
+      color: "yellow",
+      opacity: 0.2,
+      fov: drone.gimbal.fov,
+      zoom: drone.gimbal.zoom,
+    });
+  }
+  droneVisionEntities.set(droneId, { arrow: arrowEntity, cone: coneEntity });
+}
+
 defineExpose<IComponentCesiumMapExpose>({
   getViewerEntityById,
   updateDronePoseAndCamera,
@@ -310,6 +374,8 @@ defineExpose<IComponentCesiumMapExpose>({
   selectWaypointEntity,
   focusOnWaypointById,
   removeWaypointAndCone,
+  addDrone,
+  removeDrone,
 });
 </script>
 

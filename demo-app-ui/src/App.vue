@@ -1,19 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
+import { ref } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
-import type { ComponentPublicInstance } from "vue";
-import type { IComponentCesiumMapExpose } from "./types/CesiumMap";
-
-import CesiumMap from "./components/CesiumMap.vue";
+import RealTimeMap from "./components/RealTimeMap.vue";
 import DroneWidgetWrapper from "./components/DroneWidgetWrapper.vue";
-import { waypointsData } from "./data/waypoints";
-import { subscribe } from "./services/mqttService";
-import type { Telemetry } from "./types/Telemetry";
 
-const cesiumMapRef = ref<ComponentPublicInstance<IComponentCesiumMapExpose> | null>(null);
-const hideCamera = ref<boolean>(false);
-const hideMap = ref<boolean>(false);
-const waypointsInterval = ref<ReturnType<typeof setInterval> | undefined>();
+const hideCamera = ref<boolean>(true);
+const hideMap = ref<boolean>(true);
 
 const isDark = useDark({
   selector: "html",
@@ -25,77 +17,15 @@ const isDark = useDark({
 const toggleDark = useToggle(isDark);
 const toggleCamera = () => (hideCamera.value = !hideCamera.value);
 const toggleMap = () => (hideMap.value = !hideMap.value);
-
-function initWaypointsDrone() {
-  cesiumMapRef.value?.updateDronePoseAndCamera({
-    id: "705694ff7c7aafb",
-    lon: 2.36145,
-    lat: 48.8592121,
-    alt: 154,
-    gimbal: { yaw: -70, pitch: -10, fov: 70 },
-  });
-
-  cesiumMapRef.value?.addWaypoint({
-    id: "9",
-    lon: 2.4,
-    lat: 48.85,
-    alt: 100,
-    gimbal: { yaw: 90, pitch: -10, fov: 70 },
-  });
-
-  let index = 0;
-  cesiumMapRef.value?.addWaypoint(waypointsData[index], true);
-  index++;
-
-  waypointsInterval.value = setInterval(() => {
-    if (index >= waypointsData.length) {
-      clearInterval(waypointsInterval.value);
-      return;
-    }
-    cesiumMapRef.value?.addWaypoint(waypointsData[index]);
-
-    index++;
-  }, 1000);
-}
-
-onMounted(() => {
-  initWaypointsDrone();
-
-  subscribe("drone/telemetry", (data: Telemetry) => {
-    if (data.gps) {
-      console.log(data.gps.lat, data.gps.lon, data.altitude);
-
-      cesiumMapRef.value?.updateDronePoseAndCamera({
-        id: "705694ff7c7aafb",
-        lon: data.gps.lon,
-        lat: data.gps.lat,
-        alt: data.altitude ?? 0,
-        gimbal: { yaw: data.gimbal?.yaw ?? 0, pitch: data.gimbal?.pitch ?? 0, fov: data.gimbal?.fov ?? 0 },
-      });
-    }
-  });
-});
-
-onUnmounted(() => {
-  clearInterval(waypointsInterval.value);
-});
 </script>
 
 <template>
   <div class="w-full h-screen overflow-hidden">
-    <CesiumMap ref="cesiumMapRef" v-show="!hideMap" />
+    <RealTimeMap :hide-map="hideMap" />
 
     <DroneWidgetWrapper v-show="!hideCamera" />
 
     <div class="absolute bottom-2.5 right-2.5 z-50 flex flex-col gap-2 min-w-40">
-      <button
-        v-show="!hideMap"
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
-        @click="cesiumMapRef?.focusOnWaypointById('5e6087eb1b2dc')"
-      >
-        🔍 Go to Waypoint 5
-      </button>
-
       <button
         class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleDark()"
