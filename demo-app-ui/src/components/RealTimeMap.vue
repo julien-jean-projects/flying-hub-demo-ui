@@ -42,9 +42,9 @@ async function fetchWaypointsFromAPI() {
 
 function subscribeMQTT() {
   subscribe("drone/telemetry", (data: Telemetry) => {
-    if (data.gps) {
+    if (data.gps && data.id) {
       cesiumMapRef.value?.updateDronePoseAndCamera({
-        id: "705694ff7c7aafb",
+        id: data.id,
         lon: data.gps.lon,
         lat: data.gps.lat,
         alt: data.altitude ?? 0,

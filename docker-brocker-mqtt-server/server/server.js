@@ -103,7 +103,6 @@ app.get("/camera-play", (req, res) => {
       telemetryTimer = null;
       return;
     }
-
     const signal = Math.floor(Math.random() * 4) + 2;
     const telemetry = {
       gps: { lat: wp.lat, lon: wp.lon },
@@ -111,8 +110,8 @@ app.get("/camera-play", (req, res) => {
       gimbal: wp.gimbal,
       battery,
       signal,
+      id: "drone-1",
     };
-
     client.publish("drone/telemetry", JSON.stringify(telemetry));
     if (index % 2 === 1) battery = Math.max(battery - 1, 0);
     index++;
@@ -123,7 +122,7 @@ app.get("/camera-play", (req, res) => {
 
   client.publish("drone/video", JSON.stringify({ url: source }));
 
-  res.send(`Video ${source} sent with ${waypoints.length} points over 32s`);
+  res.send(`Video ${source} sent with ${waypoints.length} points for drone-1 over 32s`);
 });
 
 app.get("/api/waypoints", (req, res) => {
