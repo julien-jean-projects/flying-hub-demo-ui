@@ -121,7 +121,7 @@ const updateDronePoseAndCamera: IUpdateDronePoseAndCamera = ({ id, lon, lat, alt
     entity.label.text = new Cesium.ConstantProperty(`Drone ${id} (alt: ${alt}m)`);
   }
   if (gimbal) {
-    updateDroneVision(id, { lon, lat, alt, gimbal }, true);
+    updateDroneVision(id, { lon, lat, alt, gimbal });
   }
 };
 
@@ -281,7 +281,7 @@ function addDrone(drone: {
     }
     // Update the arrow and cone if gimbal is provided
     if (drone.gimbal) {
-      updateDroneVision(drone.id, drone, true);
+      updateDroneVision(drone.id, drone);
     }
     return;
   }
@@ -309,7 +309,7 @@ function addDrone(drone: {
   droneEntities.set(drone.id, entity);
   // Add the orange arrow and vision cone if gimbal is provided
   if (drone.gimbal) {
-    updateDroneVision(drone.id, drone, false);
+    updateDroneVision(drone.id, drone);
   }
 }
 
@@ -318,8 +318,7 @@ const droneVisionEntities = new Map<string, { arrow: Cesium.Entity; cone: Cesium
 
 function updateDroneVision(
   droneId: string,
-  drone: { lon: number; lat: number; alt: number; gimbal?: { yaw: number; pitch: number; fov: number; zoom?: number } },
-  updateOnly = false
+  drone: { lon: number; lat: number; alt: number; gimbal?: { yaw: number; pitch: number; fov: number; zoom?: number } }
 ) {
   if (!viewer.value || !drone.gimbal) return;
   // Direction calculation
@@ -332,10 +331,27 @@ function updateDroneVision(
   );
   // Orange arrow
   let arrowEntity: Cesium.Entity;
-  if (updateOnly && droneVisionEntities.has(droneId)) {
+  let coneEntity: Cesium.Entity;
+  if (droneVisionEntities.has(droneId)) {
+    // Mise à jour des entités existantes
     arrowEntity = droneVisionEntities.get(droneId)!.arrow;
     arrowEntity.polyline!.positions = new Cesium.ConstantProperty([position, end]);
+    coneEntity = droneVisionEntities.get(droneId)!.cone;
+    // Pour le cône, il faut le supprimer et le recréer pour mettre à jour la direction/FOV
+    viewer.value.entities.remove(coneEntity);
+    coneEntity = addCameraVisionCone(viewer.value, {
+      lon: drone.lon,
+      lat: drone.lat,
+      alt: drone.alt,
+      pitch: drone.gimbal.pitch,
+      yaw: drone.gimbal.yaw,
+      color: "yellow",
+      opacity: 0.2,
+      fov: drone.gimbal.fov,
+      zoom: drone.gimbal.zoom,
+    });
   } else {
+    // Création initiale
     arrowEntity = viewer.value.entities.add({
       name: `Camera Direction ${droneId}`,
       polyline: {
@@ -344,13 +360,6 @@ function updateDroneVision(
         material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.ORANGE),
       },
     });
-  }
-  // Vision cone
-  let coneEntity: Cesium.Entity;
-  if (updateOnly && droneVisionEntities.has(droneId)) {
-    coneEntity = droneVisionEntities.get(droneId)!.cone;
-    // For a real update, we should remove and recreate, but here we keep it simple
-  } else {
     coneEntity = addCameraVisionCone(viewer.value, {
       lon: drone.lon,
       lat: drone.lat,
