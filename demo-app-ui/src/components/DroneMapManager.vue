@@ -377,7 +377,7 @@ onMounted(() => {
       </div>
 
       <!-- drones list with create drone button -->
-      <div v-else class="flex flex-col gap-1 max-h-[40vh] overflow-y-auto">
+      <div v-else class="flex flex-col gap-1">
         <button
           type="button"
           @click="newDrone"
