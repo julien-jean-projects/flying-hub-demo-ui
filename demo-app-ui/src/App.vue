@@ -3,9 +3,11 @@ import { ref } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
 import RealTimeMap from "./components/RealTimeMap.vue";
 import DroneWidgetWrapper from "./components/DroneWidgetWrapper.vue";
+import DroneMapManager from "./components/DroneMapManager.vue";
 
 const hideCamera = ref<boolean>(true);
 const hideMap = ref<boolean>(true);
+const hideDroneManager = ref<boolean>(true);
 
 const isDark = useDark({
   selector: "html",
@@ -16,7 +18,14 @@ const isDark = useDark({
 
 const toggleDark = useToggle(isDark);
 const toggleCamera = () => (hideCamera.value = !hideCamera.value);
-const toggleMap = () => (hideMap.value = !hideMap.value);
+const toggleMap = () => {
+  hideDroneManager.value = true;
+  hideMap.value = !hideMap.value;
+};
+const toggleDroneManager = () => {
+  hideMap.value = true;
+  hideDroneManager.value = !hideDroneManager.value;
+};
 </script>
 
 <template>
@@ -24,6 +33,7 @@ const toggleMap = () => (hideMap.value = !hideMap.value);
     <RealTimeMap :hide-map="hideMap" />
 
     <DroneWidgetWrapper v-show="!hideCamera" />
+    <DroneMapManager v-show="!hideDroneManager" />
 
     <div class="absolute bottom-2.5 right-2.5 z-50 flex flex-col gap-2 min-w-40">
       <button
@@ -45,6 +55,13 @@ const toggleMap = () => (hideMap.value = !hideMap.value);
         @click="toggleMap()"
       >
         {{ hideMap ? "👁️ Show Map" : "🚫 Hide Map" }}
+      </button>
+
+      <button
+        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        @click="toggleDroneManager()"
+      >
+        {{ hideDroneManager ? "🛩️ Gérer les drones" : "🚫 Fermer gestion drones" }}
       </button>
     </div>
   </div>

@@ -5,6 +5,7 @@ import CesiumMap from "./CesiumMap.vue";
 import { subscribe, initMQTT, unsubscribe } from "../services/mqttService";
 import type { IComponentCesiumMapExpose } from "../types/CesiumMap";
 import type { Telemetry } from "../types/Telemetry";
+import type { Drone } from "../types/Drone";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -53,12 +54,20 @@ function subscribeMQTT() {
     }
   });
 
-  subscribe("drones/added", (drone: any) => {
-    cesiumMapRef.value?.addDrone(drone);
+  subscribe("drones/added", (drone: Drone) => {
+    if (drone.lon !== undefined && drone.lat !== undefined) {
+      cesiumMapRef.value?.addDrone({
+        ...drone,
+        lon: drone.lon,
+        lat: drone.lat,
+      });
+    }
   });
 
-  subscribe("drones/removed", (drone: any) => {
-    cesiumMapRef.value?.removeDrone(drone.id);
+  subscribe("drones/removed", (id: string) => {
+    if (cesiumMapRef.value) {
+      cesiumMapRef.value.removeDrone(id);
+    }
   });
 }
 
@@ -94,7 +103,7 @@ onUnmounted(() => {
     <div class="absolute top-2.5 left-2.5 z-50 flex flex-col gap-2 min-w-40">
       <button
         class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
-        @click="cesiumMapRef?.focusOnWaypointById('5e6087eb1b2dc')"
+        @click="cesiumMapRef?.focusOnCesiumEntityById('5e6087eb1b2dc')"
       >
         🔍 Go to Waypoint 5
       </button>

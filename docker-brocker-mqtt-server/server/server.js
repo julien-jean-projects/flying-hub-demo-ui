@@ -58,7 +58,7 @@ app.delete("/api/drones/:id", (req, res) => {
   const idx = drones.findIndex((d) => d.id === id);
   if (idx === -1) return res.status(404).json({ error: "not found" });
   drones.splice(idx, 1);
-  client.publish("drones/removed", id);
+  client.publish("drones/removed", JSON.stringify(id));
   res.json({ ok: true });
 });
 
@@ -71,30 +71,6 @@ app.put("/api/drones/:id", (req, res) => {
   client.publish("drones/updated", JSON.stringify(drones[idx]));
   res.json({ ok: true, drone: drones[idx] });
 });
-
-// testing ... adds and removes every 5 seconds to test MQTT
-setInterval(() => {
-  const idx = drones.findIndex((d) => d.id === "drone-3");
-  if (idx === -1) {
-    // add
-    const drone3 = {
-      id: "drone-3",
-      lon: 2.358,
-      lat: 48.86,
-      alt: 120,
-      gimbal: { yaw: 30, pitch: -90, fov: 68, zoom: 5 },
-    };
-    drones.push(drone3);
-    client.publish("drones/added", JSON.stringify(drone3));
-    console.log("[API] Drone-3 ajouté et publié via MQTT");
-  } else {
-    // remove
-    const drone3 = drones[idx];
-    drones.splice(idx, 1);
-    client.publish("drones/removed", JSON.stringify(drone3));
-    console.log("[API] Drone-3 supprimé et publié via MQTT");
-  }
-}, 5000);
 
 let telemetryTimer = null;
 
