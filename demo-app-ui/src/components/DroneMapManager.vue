@@ -271,10 +271,7 @@ onMounted(() => {
               <button
                 @click="validateDroneId"
                 class="bg-green-600 hover:bg-green-800 text-white rounded p-1 flex items-center"
-                :class="{
-                  'cursor-pointer': editingDrone.id && !isDuplicateDroneId,
-                  'cursor-not-allowed': !editingDrone.id || isDuplicateDroneId,
-                }"
+                :class="[!editingDrone.id || isDuplicateDroneId ? 'cursor-not-allowed' : 'cursor-pointer']"
                 :disabled="!editingDrone.id || isDuplicateDroneId"
               >
                 ✔️
@@ -337,31 +334,40 @@ onMounted(() => {
                   editingDrone.lon === undefined ||
                   editingDrone.lat === undefined ||
                   !editingDrone.id ||
-                  !droneCreation
+                  !droneCreation ||
+                  !currentDrone.added
                 "
                 class="bg-sky-700 hover:bg-sky-900 text-white px-3 py-1 rounded text-sm"
+                :class="[
+                  !editingDrone ||
+                  editingDrone.lon === undefined ||
+                  editingDrone.lat === undefined ||
+                  !editingDrone.id ||
+                  !droneCreation ||
+                  !currentDrone.added
+                    ? 'cursor-not-allowed'
+                    : 'cursor-pointer',
+                ]"
               >
                 Enregistrer
               </button>
-
               <button
                 @click="cancelAddDrone"
-                class="bg-gray-300 hover:bg-gray-400 text-black px-3 py-1 rounded text-sm"
+                class="bg-gray-300 hover:bg-gray-400 text-black px-3 py-1 rounded text-sm cursor-pointer dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
               >
                 Annuler
               </button>
-
               <button
                 v-if="currentDrone.added && !cesiumMapRef?.isCesiumEntitySelected()"
                 @click="selectCurrentDroneOnMap"
-                class="bg-green-200 hover:bg-green-400 text-black px-3 py-1 rounded text-sm"
+                class="bg-green-200 hover:bg-green-400 text-black px-3 py-1 rounded text-sm cursor-pointer dark:bg-green-800 dark:hover:bg-green-600 dark:text-white"
               >
                 Sélectionner le drone
               </button>
               <button
                 v-if="currentDrone.added && cesiumMapRef?.isCesiumEntitySelected()"
                 @click="deselectDroneOnMap"
-                class="bg-yellow-200 hover:bg-yellow-400 text-black px-3 py-1 rounded text-sm"
+                class="bg-yellow-200 hover:bg-yellow-400 text-black px-3 py-1 rounded text-sm cursor-pointer dark:bg-yellow-700 dark:hover:bg-yellow-600 dark:text-white"
               >
                 Désélectionner le drone
               </button>
@@ -375,7 +381,7 @@ onMounted(() => {
         <button
           type="button"
           @click="newDrone"
-          class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-sm self-start mb-2 cursor-pointer"
+          class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-sm self-start mb-2 cursor-pointer dark:bg-green-800 dark:hover:bg-green-900 dark:text-white"
         >
           Ajouter un drone
         </button>
@@ -399,15 +405,14 @@ onMounted(() => {
 
           <button
             @click="cesiumMapRef?.focusOnCesiumEntityById(drone.id ?? '')"
-            class="flex items-center gap-1 bg-blue-600 hover:bg-blue-800 text-white text-xs px-2 py-1 rounded transition-colors duration-100 cursor-pointer"
+            class="flex items-center gap-1 bg-blue-600 hover:bg-blue-800 text-white text-xs px-2 py-1 rounded transition-colors duration-100 cursor-pointer dark:bg-blue-900 dark:hover:bg-blue-700 dark:text-white"
           >
             <span>👁️</span>
             <span>Voir</span>
           </button>
-
           <button
             @click="deleteDrone(drone.id)"
-            class="flex items-center gap-1 bg-red-600 hover:bg-red-800 text-white text-xs px-2 py-1 rounded transition-colors duration-100 cursor-pointer"
+            class="flex items-center gap-1 bg-red-600 hover:bg-red-800 text-white text-xs px-2 py-1 rounded transition-colors duration-100 cursor-pointer dark:bg-red-900 dark:hover:bg-red-700 dark:text-white"
           >
             <span>🗑️</span>
             <span>Supprimer</span>
