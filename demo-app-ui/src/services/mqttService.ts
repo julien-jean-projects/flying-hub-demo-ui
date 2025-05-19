@@ -53,3 +53,15 @@ export function subscribe(topic: string, callback: (payload: any) => void) {
     client?.unsubscribe(topic);
   };
 }
+
+export function unsubscribe(topic: string) {
+  if (!client) return;
+
+  client.unsubscribe(topic, (err) => {
+    if (err) {
+      console.error(`[MQTT] Failed to unsubscribe from ${topic}`, err);
+    } else {
+      console.log(`[MQTT] Unsubscribed from ${topic}`);
+    }
+  });
+}

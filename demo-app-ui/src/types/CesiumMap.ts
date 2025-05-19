@@ -18,9 +18,21 @@ export interface IComponentCesiumMapExpose {
   addWaypoint: IAddWaypoint;
   updateDronePoseAndCamera: IUpdateDronePoseAndCamera;
   lookAtWaypoint: ILookAtWaypoint;
-  selectWaypointEntity: ISelectWaypointEntity;
-  focusOnWaypointById: IFocusOnWaypointById;
+  selectCesiumEntity: ISelectCesiumEntity;
+  focusOnCesiumEntityById: IFocusOnCesiumEntityById;
   removeWaypointAndCone: IRemoveWaypointAndCone;
+  addDrone: (drone: {
+    id: string;
+    lon: number;
+    lat: number;
+    alt: number;
+    gimbal?: { yaw: number; pitch: number; fov: number; zoom?: number };
+  }) => void;
+  removeDrone: (droneId: string) => void;
+  /** Retourne true si une entité Cesium est sélectionnée, false sinon */
+  isCesiumEntitySelected: () => boolean;
+  /** Désélectionne toute entité Cesium sélectionnée */
+  deselectCesiumEntity: () => void;
 }
 
 export interface IAddWaypoint {
@@ -70,11 +82,11 @@ export interface IGetViewerEntityById {
   (id: string): Cesium.Entity | null;
 }
 
-export interface ISelectWaypointEntity {
-  (entity: Cesium.Entity): void;
+export interface ISelectCesiumEntity {
+  (entity: Cesium.Entity, options?: { focus?: boolean }): null | { lon: number; lat: number; alt: number };
 }
 
-export interface IFocusOnWaypointById {
+export interface IFocusOnCesiumEntityById {
   (id: string): void;
 }
 

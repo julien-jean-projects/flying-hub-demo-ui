@@ -27,6 +27,51 @@ const waypoints = [
   { id: "51fd0297e236d", lon: 2.395, lat: 48.851, alt: 30, gimbal: { yaw: 315, pitch: -12, fov: 68 } },
 ];
 
+const drones = [
+  { id: "drone-1", lon: 2.359, lat: 48.86, alt: 120, gimbal: { yaw: 30, pitch: -45, fov: 68, zoom: 5 } },
+  { id: "drone-2", lon: 2.3585, lat: 48.86, alt: 120, gimbal: { yaw: 30, pitch: -45, fov: 68, zoom: 5 } },
+];
+
+const missions = [
+  { id: "mission-1", waypoints, description: "Inspection Tour Eiffel", authorId: 1 },
+  { id: "mission-2", waypoints, description: "Surveillance Seine", authorId: 1 },
+  { id: "mission-3", waypoints, description: "Patrouille Quartier Latin", authorId: 2 },
+];
+
+app.use(express.json());
+
+app.get("/api/drones", (req, res) => {
+  res.json(drones);
+});
+
+app.post("/api/drones", (req, res) => {
+  const drone = req.body;
+  if (!drone || !drone.id) return res.status(400).json({ error: "id manquant" });
+  if (drones.find((d) => d.id === drone.id)) return res.status(409).json({ error: "déjà existant" });
+  drones.push(drone);
+  client.publish("drones/added", JSON.stringify(drone));
+  res.json({ ok: true });
+});
+
+app.delete("/api/drones/:id", (req, res) => {
+  const { id } = req.params;
+  const idx = drones.findIndex((d) => d.id === id);
+  if (idx === -1) return res.status(404).json({ error: "not found" });
+  drones.splice(idx, 1);
+  client.publish("drones/removed", JSON.stringify(id));
+  res.json({ ok: true });
+});
+
+app.put("/api/drones/:id", (req, res) => {
+  const { id } = req.params;
+  const idx = drones.findIndex((d) => d.id === id);
+  if (idx === -1) return res.status(404).json({ error: "not found" });
+  const update = req.body;
+  drones[idx] = { ...drones[idx], ...update, id };
+  client.publish("drones/updated", JSON.stringify(drones[idx]));
+  res.json({ ok: true, drone: drones[idx] });
+});
+
 let telemetryTimer = null;
 
 app.get("/camera-play", (req, res) => {
@@ -44,7 +89,6 @@ app.get("/camera-play", (req, res) => {
       telemetryTimer = null;
       return;
     }
-
     const signal = Math.floor(Math.random() * 4) + 2;
     const telemetry = {
       gps: { lat: wp.lat, lon: wp.lon },
@@ -52,8 +96,8 @@ app.get("/camera-play", (req, res) => {
       gimbal: wp.gimbal,
       battery,
       signal,
+      id: "drone-1",
     };
-
     client.publish("drone/telemetry", JSON.stringify(telemetry));
     if (index % 2 === 1) battery = Math.max(battery - 1, 0);
     index++;
@@ -64,11 +108,17 @@ app.get("/camera-play", (req, res) => {
 
   client.publish("drone/video", JSON.stringify({ url: source }));
 
-  res.send(`Video ${source} sent with ${waypoints.length} points over 32s`);
+  res.send(`Video ${source} sent with ${waypoints.length} points for drone-1 over 32s`);
 });
 
-app.get("/waypoints", (req, res) => {
-  res.json(waypoints);
+app.get("/api/waypoints", (req, res) => {
+  res.json(missions);
+});
+
+app.get("/api/waypoints/:id", (req, res) => {
+  const mission = missions.find((m) => m.id === req.params.id);
+  if (!mission) return res.status(404).json({ error: "Mission not found" });
+  res.json(mission.waypoints);
 });
 
 const port = parseInt(process.env.DRONE_SERVER_HTTP_PORT || 3000);
