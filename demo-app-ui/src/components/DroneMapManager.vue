@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { ref, watch, reactive, type ComponentPublicInstance, onMounted, onUnmounted, computed } from "vue";
+import { storeToRefs } from "pinia";
+import { useMQTTStore } from "../stores/useMQTTStore";
 import CesiumMap from "./CesiumMap.vue";
 import DraggableResizable from "./reusable/DraggableResizable.vue";
 import type { IComponentCesiumMapExpose } from "../types/CesiumMap";
 import type { Drone } from "../types/Drone";
-import { initMQTT, subscribe, unsubscribe } from "../services/mqttService";
 
 const apiUrl = import.meta.env.VITE_API_URL;
-const drones = ref<Drone[]>([]);
+
+const mqttStore = useMQTTStore();
+const { drones } = storeToRefs(mqttStore);
+const { fetchDrones, subscribeMQTT } = mqttStore;
+
 const editingDrone = ref<Drone | null>(null);
 const addingDrone = ref(false);
 const droneCreation = ref(false);
@@ -18,7 +23,7 @@ const currentDrone = reactive<{ added: boolean }>({ added: false });
 
 const isDuplicateDroneId = computed<boolean>(() => {
   if (!editingDrone.value || !editingDrone.value.id) return false;
-  return drones.value.some((d) => d.id === editingDrone.value?.id) && !droneCreation.value;
+  return drones.value.some((d: Drone) => d.id === editingDrone.value?.id) && !droneCreation.value;
 });
 
 function newDrone() {
@@ -61,32 +66,6 @@ function selectCurrentDroneOnMap() {
 function deselectDroneOnMap() {
   if (cesiumMapRef.value && cesiumMapRef.value.deselectCesiumEntity) {
     cesiumMapRef.value.deselectCesiumEntity();
-  }
-}
-
-async function fetchDrones() {
-  try {
-    const res = await fetch(`${apiUrl}/api/drones`);
-    const data = await res.json();
-    drones.value = (data as Drone[]).map((d) => ({
-      ...d,
-      lon: d.lon as number,
-      lat: d.lat as number,
-    }));
-    // Afficher tous les drones sur la carte
-    if (cesiumMapRef.value) {
-      drones.value.forEach((drone) => {
-        if (drone.lon !== undefined && drone.lat !== undefined) {
-          cesiumMapRef.value?.addDrone({
-            ...drone,
-            lon: drone.lon!,
-            lat: drone.lat!,
-          });
-        }
-      });
-    }
-  } catch (e) {
-    alert("Erreur lors du chargement des drones");
   }
 }
 
@@ -143,7 +122,7 @@ async function deleteDrone(id: string) {
 function saveEditingDrone() {
   if (!editingDrone.value || !editingDrone.value.id) return;
   cesiumMapRef.value?.removeDrone("__TEMP__");
-  if (drones.value.some((d) => d.id === editingDrone.value!.id)) {
+  if (drones.value.some((d: Drone) => d.id === editingDrone.value!.id)) {
     updateDrone(editingDrone.value as Drone);
   } else {
     createDrone(editingDrone.value as Drone);
@@ -161,7 +140,7 @@ function validateDroneId() {
     droneCreation.value = false;
     return;
   }
-  if (drones.value.some((d) => d.id === editingDrone.value?.id)) {
+  if (drones.value.some((d: Drone) => d.id === editingDrone.value?.id)) {
     droneCreation.value = false;
     return;
   }
@@ -201,42 +180,44 @@ watch(
 );
 
 onMounted(async () => {
-  await initMQTT();
+  await subscribeMQTT();
+  await fetchDrones();
 
-  droneCreation.value = false;
-  fetchDrones();
-
-  subscribe("drones/added", (drone: Drone) => {
-    if (!drones.value.some((d) => d.id === drone.id)) {
-      drones.value.push(drone);
-      if (cesiumMapRef.value && drone.lon !== undefined && drone.lat !== undefined) {
-        cesiumMapRef.value.addDrone({
+  if (cesiumMapRef.value) {
+    drones.value.forEach((drone) => {
+      if (drone.lon !== undefined && drone.lat !== undefined) {
+        cesiumMapRef.value?.addDrone({
           ...drone,
           lon: drone.lon!,
           lat: drone.lat!,
         });
-        const entity = cesiumMapRef.value.getViewerEntityById(drone.id);
-        if (entity) {
-          cesiumMapRef.value.selectCesiumEntity(entity, { focus: false });
-        }
+      }
+    });
+  }
+
+  mqttStore.getEventCallback("drones/added", (drone: Drone) => {
+    if (cesiumMapRef.value && drone.lon !== undefined && drone.lat !== undefined) {
+      cesiumMapRef.value.addDrone({
+        ...drone,
+        lon: drone.lon!,
+        lat: drone.lat!,
+      });
+      const entity = cesiumMapRef.value.getViewerEntityById(drone.id);
+      if (entity) {
+        cesiumMapRef.value.selectCesiumEntity(entity, { focus: false });
       }
     }
   });
 
-  subscribe("drones/removed", (id: string) => {
-    const idx = drones.value.findIndex((d) => d.id === id);
-    if (idx !== -1) {
-      drones.value.splice(idx, 1);
-      if (cesiumMapRef.value) {
-        cesiumMapRef.value.removeDrone(id);
-      }
+  mqttStore.getEventCallback("drones/removed", (id: string) => {
+    if (cesiumMapRef.value) {
+      cesiumMapRef.value.removeDrone(id);
     }
   });
 });
 
 onUnmounted(() => {
-  unsubscribe("drones/added");
-  unsubscribe("drones/removed");
+  mqttStore.unsubscribeMQTT();
 });
 </script>
 

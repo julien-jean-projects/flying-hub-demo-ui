@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import type { ComponentPublicInstance } from "vue";
 import CesiumMap from "./CesiumMap.vue";
-import { subscribe, initMQTT, unsubscribe } from "../services/mqttService";
+import { useMQTTStore } from "../stores/useMQTTStore";
 import type { IComponentCesiumMapExpose } from "../types/CesiumMap";
 import type { Telemetry } from "../types/Telemetry";
 import type { Drone } from "../types/Drone";
@@ -12,6 +12,7 @@ const apiUrl = import.meta.env.VITE_API_URL;
 const props = defineProps<{ hideMap?: boolean }>();
 
 const cesiumMapRef = ref<ComponentPublicInstance<IComponentCesiumMapExpose> | null>(null);
+const mqttStore = useMQTTStore();
 
 async function fetchDronesFromAPI() {
   try {
@@ -41,8 +42,16 @@ async function fetchWaypointsFromAPI() {
   }
 }
 
-function subscribeMQTT() {
-  subscribe("drone/telemetry", (data: Telemetry) => {
+watch(
+  () => props.hideMap,
+  () => window.getSelection()?.removeAllRanges()
+);
+
+onMounted(async () => {
+  await fetchWaypointsFromAPI();
+  await fetchDronesFromAPI();
+
+  mqttStore.getEventCallback("drone/telemetry", (data: Telemetry) => {
     if (data.gps && data.id) {
       cesiumMapRef.value?.updateDronePoseAndCamera({
         id: data.id,
@@ -53,8 +62,7 @@ function subscribeMQTT() {
       });
     }
   });
-
-  subscribe("drones/added", (drone: Drone) => {
+  mqttStore.getEventCallback("drones/added", (drone: Drone) => {
     if (drone.lon !== undefined && drone.lat !== undefined) {
       cesiumMapRef.value?.addDrone({
         ...drone,
@@ -63,36 +71,15 @@ function subscribeMQTT() {
       });
     }
   });
-
-  subscribe("drones/removed", (id: string) => {
+  mqttStore.getEventCallback("drones/removed", (id: string) => {
     if (cesiumMapRef.value) {
       cesiumMapRef.value.removeDrone(id);
     }
   });
-}
-
-function unsubscribeMQTT() {
-  unsubscribe("drone/telemetry");
-  unsubscribe("drones/added");
-  unsubscribe("drones/removed");
-}
-
-watch(
-  () => props.hideMap,
-  () => window.getSelection()?.removeAllRanges()
-);
-
-onMounted(async () => {
-  await initMQTT();
-
-  await fetchWaypointsFromAPI();
-  await fetchDronesFromAPI();
-
-  subscribeMQTT();
 });
 
 onUnmounted(() => {
-  unsubscribeMQTT();
+  mqttStore.unsubscribeMQTT();
 });
 </script>
 
