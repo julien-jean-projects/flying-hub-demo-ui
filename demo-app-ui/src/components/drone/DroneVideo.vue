@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { initMQTT, subscribe } from "../../services/mqttService";
+import { onMounted, onUnmounted, ref } from "vue";
+import { initMQTT, subscribe, unsubscribe } from "../../services/mqttService";
 import type { Telemetry } from "../../types/Telemetry";
 
 const emit = defineEmits<{
@@ -40,6 +40,11 @@ onMounted(async () => {
       if (!isTakeOff.value) takeOff();
     }
   });
+});
+
+onUnmounted(() => {
+  unsubscribe("drone/video");
+  unsubscribe("drone/telemetry");
 });
 </script>
 

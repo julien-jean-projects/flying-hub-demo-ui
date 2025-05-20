@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { reactive, computed, onMounted } from "vue";
-import { initMQTT, subscribe } from "../../services/mqttService";
+import { reactive, computed, onMounted, onUnmounted } from "vue";
+import { initMQTT, subscribe, unsubscribe } from "../../services/mqttService";
 import type { Telemetry } from "../../types/Telemetry";
 
 const telemetry = reactive<Telemetry>({});
@@ -21,6 +21,10 @@ onMounted(async () => {
   subscribe("drone/telemetry", (data: Telemetry) => {
     Object.assign(telemetry, data);
   });
+});
+
+onUnmounted(() => {
+  unsubscribe("drone/telemetry");
 });
 </script>
 

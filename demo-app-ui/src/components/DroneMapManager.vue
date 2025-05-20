@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, reactive, type ComponentPublicInstance, onMounted, computed } from "vue";
+import { ref, watch, reactive, type ComponentPublicInstance, onMounted, onUnmounted, computed } from "vue";
 import CesiumMap from "./CesiumMap.vue";
 import DraggableResizable from "./reusable/DraggableResizable.vue";
 import type { IComponentCesiumMapExpose } from "../types/CesiumMap";
 import type { Drone } from "../types/Drone";
-import { subscribe } from "../services/mqttService";
+import { initMQTT, subscribe, unsubscribe } from "../services/mqttService";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 const drones = ref<Drone[]>([]);
@@ -200,7 +200,9 @@ watch(
   { immediate: true }
 );
 
-onMounted(() => {
+onMounted(async () => {
+  await initMQTT();
+
   droneCreation.value = false;
   fetchDrones();
 
@@ -230,6 +232,11 @@ onMounted(() => {
       }
     }
   });
+});
+
+onUnmounted(() => {
+  unsubscribe("drones/added");
+  unsubscribe("drones/removed");
 });
 </script>
 
