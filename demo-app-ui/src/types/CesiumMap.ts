@@ -13,6 +13,19 @@ export interface IWaypoint {
   };
 }
 
+export interface IMission {
+  id: string;
+  waypoints: IWaypoint[];
+  description: string;
+  authorId: number;
+}
+
+export interface IExclusionZone {
+  id: string;
+  color?: string;
+  points: Array<{ lon: number; lat: number }>;
+}
+
 export interface IComponentCesiumMapExpose {
   getViewerEntityById: IGetViewerEntityById;
   addWaypoint: IAddWaypoint;
@@ -29,10 +42,22 @@ export interface IComponentCesiumMapExpose {
     gimbal?: { yaw: number; pitch: number; fov: number; zoom?: number };
   }) => void;
   removeDrone: (droneId: string) => void;
-  /** Retourne true si une entité Cesium est sélectionnée, false sinon */
+  /** Returns true if a Cesium entity is selected, false otherwise */
   isCesiumEntitySelected: () => boolean;
-  /** Désélectionne toute entité Cesium sélectionnée */
+  /** Deselects any selected Cesium entity */
   deselectCesiumEntity: () => void;
+  /** Adds an exclusion zone (red polygon) */
+  addExclusionZone: (zone: IExclusionZone) => void;
+  /** Removes an exclusion zone by id */
+  removeExclusionZone: (id: string) => void;
+  /** Returns the list of exclusion zones */
+  getExclusionZones: () => IExclusionZone[];
+  /** Clears all waypoints, polylines, and arrows from the map */
+  clearAllWaypointsAndPolylines: () => void;
+  /** Updates the trajectory (red polyline) of the waypoints */
+  setAllPositions: (positions: Cesium.Cartesian3[]) => void;
+  /** Removes the yellow arrow associated with a given waypoint */
+  removeCameraArrowByWaypointId: (id: string) => void;
 }
 
 export interface IAddWaypoint {

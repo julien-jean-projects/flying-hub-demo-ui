@@ -33,9 +33,32 @@ const drones = [
 ];
 
 const missions = [
-  { id: "mission-1", waypoints, description: "Inspection Tour Eiffel", authorId: 1 },
-  { id: "mission-2", waypoints, description: "Surveillance Seine", authorId: 1 },
-  { id: "mission-3", waypoints, description: "Patrouille Quartier Latin", authorId: 2 },
+  { id: "mission-1", waypoints: [...waypoints], description: "Inspection Tour Eiffel", authorId: 1 },
+  { id: "mission-2", waypoints: [...waypoints], description: "Surveillance Seine", authorId: 1 },
+  { id: "mission-3", waypoints: [...waypoints], description: "Patrouille Quartier Latin", authorId: 2 },
+];
+
+const exclusionZones = [
+  {
+    id: "zone-1",
+    color: "red",
+    points: [
+      { lon: 2.36, lat: 48.86 },
+      { lon: 2.37, lat: 48.86 },
+      { lon: 2.37, lat: 48.865 },
+      { lon: 2.36, lat: 48.865 },
+    ],
+  },
+  {
+    id: "zone-2",
+    color: "red",
+    points: [
+      { lon: 2.38, lat: 48.855 },
+      { lon: 2.385, lat: 48.855 },
+      { lon: 2.385, lat: 48.86 },
+      { lon: 2.38, lat: 48.86 },
+    ],
+  },
 ];
 
 app.use(express.json());
@@ -119,6 +142,37 @@ app.get("/api/waypoints/:id", (req, res) => {
   const mission = missions.find((m) => m.id === req.params.id);
   if (!mission) return res.status(404).json({ error: "Mission not found" });
   res.json(mission.waypoints);
+});
+
+app.delete("/api/waypoints/:missionId/:waypointId", (req, res) => {
+  const { missionId, waypointId } = req.params;
+  const mission = missions.find((m) => m.id === missionId);
+  if (!mission) return res.status(404).json({ error: "Mission not found" });
+  const idx = mission.waypoints.findIndex((wp) => wp.id === waypointId);
+  if (idx === -1) return res.status(404).json({ error: "Waypoint not found" });
+  mission.waypoints.splice(idx, 1);
+
+  client.publish("waypoints/removed", JSON.stringify({ missionId, waypointId }));
+  res.json({ ok: true });
+});
+
+app.post("/api/waypoints/:missionId", (req, res) => {
+  const { missionId } = req.params;
+  const mission = missions.find((m) => m.id === missionId);
+  if (!mission) return res.status(404).json({ error: "Mission not found" });
+  let wp = req.body;
+
+  if (!wp || !wp.lon || !wp.lat) return res.status(400).json({ error: "Waypoint data missing (lon/lat)" });
+  if (!wp.id) {
+    wp.id = Math.random().toString(36).slice(2, 14);
+  }
+  mission.waypoints.push(wp);
+  client.publish("waypoints/added", JSON.stringify({ missionId, waypoint: wp }));
+  res.json({ ok: true });
+});
+
+app.get("/api/exclusion-zones", (req, res) => {
+  res.json(exclusionZones);
 });
 
 const port = parseInt(process.env.DRONE_SERVER_HTTP_PORT || 3000);

@@ -12,6 +12,7 @@ import type {
   IComponentCesiumMapExpose,
   IGetViewerEntityById,
   IRemoveWaypointAndCone,
+  IExclusionZone,
 } from "../types/CesiumMap";
 
 import droneImage from "../assets/drone.png";
@@ -32,6 +33,10 @@ const waypointConeEntities = new Map<string, Cesium.Entity>();
 
 // Map to store drone entities by id
 const droneEntities = new Map<string, Cesium.Entity>();
+
+// --- Exclusion zones (red polygons) ---
+const exclusionZones = ref<IExclusionZone[]>([]);
+const exclusionZoneEntities = new Map<string, Cesium.Entity>();
 
 // Cesium initialization
 onMounted(() => {
@@ -430,6 +435,102 @@ function updateDroneVision(
   droneVisionEntities.set(droneId, { arrow: arrowEntity, cone: coneEntity });
 }
 
+// --- Exclusion zone management ---
+function addExclusionZone(zone: IExclusionZone) {
+  if (!viewer.value) return;
+
+  removeExclusionZone(zone.id);
+  const positions = zone.points.map((p) => Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 0));
+  const entity = viewer.value.entities.add({
+    id: `exclusion-${zone.id}`,
+    polygon: {
+      hierarchy: positions,
+      material: Cesium.Color.RED.withAlpha(0.4),
+      outline: true,
+      outlineColor: Cesium.Color.RED,
+      outlineWidth: 2,
+    },
+    description: "___UNSELECTABLE___",
+  });
+  exclusionZones.value.push(zone);
+  exclusionZoneEntities.set(zone.id, entity);
+}
+
+function removeExclusionZone(id: string) {
+  if (!viewer.value) return;
+  const entity = exclusionZoneEntities.get(id);
+  if (entity) {
+    viewer.value.entities.remove(entity);
+    exclusionZoneEntities.delete(id);
+  }
+  exclusionZones.value = exclusionZones.value.filter((z) => z.id !== id);
+}
+
+function getExclusionZones() {
+  return exclusionZones.value;
+}
+
+function clearAllWaypointsAndPolylines() {
+  if (!viewer.value) return;
+  // Remove all waypoints (points, polylines, arrows, cones)
+  const entities = viewer.value.entities.values;
+  const toRemove = [];
+  for (const entity of entities) {
+    // Target entities created for waypoints (points, polylines, arrows, cones)
+    if (
+      (entity.name && entity.name.startsWith("Waypoint ")) ||
+      (entity.name && entity.name.startsWith("Caméra prévue ")) ||
+      (entity.name && entity.name.startsWith("Camera Direction ")) ||
+      (entity.polyline &&
+        entity.polyline.material &&
+        ((entity.polyline.material instanceof Cesium.ColorMaterialProperty &&
+          entity.polyline.material.color?.getValue &&
+          Cesium.Color.equals(entity.polyline.material.color.getValue(Cesium.JulianDate.now()), Cesium.Color.RED)) ||
+          entity.polyline.material instanceof Cesium.PolylineDashMaterialProperty))
+    ) {
+      // DO NOT REMOVE the main red polyline (description '___UNSELECTABLE___')
+      let desc =
+        typeof entity.description?.getValue === "function"
+          ? entity.description.getValue(Cesium.JulianDate.now())
+          : entity.description;
+      if (desc === "___UNSELECTABLE___") {
+        continue;
+      }
+      toRemove.push(entity);
+    }
+  }
+  toRemove.forEach((e) => viewer.value!.entities.remove(e));
+  allPositions.value = [];
+  // Cleanup green cones and yellow arrows related to waypoints
+  waypointConeEntities.forEach((coneEntity) => {
+    viewer.value!.entities.remove(coneEntity);
+  });
+  waypointConeEntities.clear();
+  // Remove yellow arrows ("Caméra prévue") if they exist
+  const yellowArrowsToRemove: Cesium.Entity[] = [];
+  for (const entity of viewer.value!.entities.values) {
+    if (entity.name && entity.name.startsWith("Caméra prévue ")) {
+      yellowArrowsToRemove.push(entity);
+    }
+  }
+  yellowArrowsToRemove.forEach((e) => viewer.value!.entities.remove(e));
+}
+
+function setAllPositions(positions: Cesium.Cartesian3[]) {
+  allPositions.value = positions;
+}
+
+function removeCameraArrowByWaypointId(id: string) {
+  if (!viewer.value) return;
+  const toRemove: Cesium.Entity[] = [];
+  for (const entity of viewer.value.entities.values) {
+    if (entity.name === `Caméra prévue ${id}`) {
+      toRemove.push(entity);
+    }
+  }
+  toRemove.forEach((e) => viewer.value!.entities.remove(e));
+}
+
 defineExpose<IComponentCesiumMapExpose>({
   getViewerEntityById,
   updateDronePoseAndCamera,
@@ -442,6 +543,12 @@ defineExpose<IComponentCesiumMapExpose>({
   removeWaypointAndCone,
   addDrone,
   removeDrone,
+  addExclusionZone,
+  removeExclusionZone,
+  getExclusionZones,
+  clearAllWaypointsAndPolylines,
+  setAllPositions,
+  removeCameraArrowByWaypointId,
 });
 </script>
 
