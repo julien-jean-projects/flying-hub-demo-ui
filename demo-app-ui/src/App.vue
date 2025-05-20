@@ -5,11 +5,11 @@ import RealTimeMap from "./components/RealTimeMap.vue";
 import DroneWidgetWrapper from "./components/DroneWidgetWrapper.vue";
 import DroneMapManager from "./components/DroneMapManager.vue";
 import FlightPlanner from "./components/FlightPlanner.vue";
+import DraggableResizable from "./components/reusable/DraggableResizable.vue";
 
 const hideCamera = ref<boolean>(true);
-const hideMap = ref<boolean>(true);
-const hideDroneManager = ref<boolean>(true);
-const hideFlightPlanner = ref<boolean>(true);
+const mapSelected = ref<null | "realtime" | "drone" | "planner">(null);
+const menuReduced = ref(true);
 
 const isDark = useDark({
   selector: "html",
@@ -21,65 +21,78 @@ const isDark = useDark({
 const toggleDark = useToggle(isDark);
 const toggleCamera = () => (hideCamera.value = !hideCamera.value);
 const toggleMap = () => {
-  hideDroneManager.value = true;
-  hideFlightPlanner.value = true;
-  hideMap.value = !hideMap.value;
+  mapSelected.value = mapSelected.value === "realtime" ? null : "realtime";
 };
 const toggleDroneManager = () => {
-  hideMap.value = true;
-  hideFlightPlanner.value = true;
-  hideDroneManager.value = !hideDroneManager.value;
+  mapSelected.value = mapSelected.value === "drone" ? null : "drone";
 };
 const toggleFlightPlanner = () => {
-  hideMap.value = true;
-  hideDroneManager.value = true;
-  hideFlightPlanner.value = !hideFlightPlanner.value;
+  mapSelected.value = mapSelected.value === "planner" ? null : "planner";
 };
+const toggleMenuReduced = () => (menuReduced.value = !menuReduced.value);
 </script>
 
 <template>
   <div class="w-full h-screen overflow-hidden">
-    <RealTimeMap :hide-map="hideMap" />
+    <RealTimeMap v-show="mapSelected === 'realtime'" />
+    <DroneMapManager v-show="mapSelected === 'drone'" />
+    <FlightPlanner v-show="mapSelected === 'planner'" />
 
-    <DroneWidgetWrapper v-show="!hideCamera" />
-    <DroneMapManager v-show="!hideDroneManager" />
-    <FlightPlanner v-show="!hideFlightPlanner" />
+    <DroneWidgetWrapper v-show="!hideCamera" class="z-50" />
 
-    <div class="absolute bottom-2.5 right-2.5 z-50 flex flex-col gap-2 min-w-40">
+    <DraggableResizable
+      :class="[menuReduced ? 'max-w-[40px]' : 'max-w-[200px]', 'z-100']"
+      content-classes="flex flex-col gap-2"
+      :initial-position="{ x: 0, y: 0 }"
+      height-auto
+    >
+      <template #header>
+        <span v-if="!menuReduced" class="w-full text-center font-bold uppercase"> Draggable Menu </span>
+        <div v-else class="h-2"></div>
+      </template>
+
       <button
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        @click="toggleMenuReduced()"
+      >
+        <span v-if="!menuReduced">Réduire</span>
+        <span class="font-bold px-1"> ☰</span>
+      </button>
+
+      <button
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleDark()"
       >
-        Switch to {{ !isDark ? "🌙" : "☀️" }}
+        <span v-if="!menuReduced">Thème</span> {{ !isDark ? "🌙" : "☀️" }}
       </button>
 
       <button
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleCamera()"
       >
-        {{ hideCamera ? "🎥 Show Camera" : "📹 Hide Camera" }}
+        <span v-if="!menuReduced">Telemetrie(Camera)</span> {{ hideCamera ? "🎥" : "🚫" }}
       </button>
 
       <button
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleMap()"
       >
-        {{ hideMap ? "👁️ Show Map" : "🚫 Hide Map" }}
+        <span v-if="!menuReduced">Realtime Map</span> {{ mapSelected !== "realtime" ? "👁️" : "🚫" }}
       </button>
 
       <button
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleDroneManager()"
       >
-        {{ hideDroneManager ? "🛩️ Gérer les drones" : "🚫 Fermer gestion drones" }}
+        <span v-if="!menuReduced">Gestion drones</span> {{ mapSelected !== "drone" ? "🛩️ " : "🚫" }}
       </button>
 
       <button
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleFlightPlanner()"
       >
-        {{ hideFlightPlanner ? "🗺️ Planifier un vol" : "🚫 Fermer planification" }}
+        <span v-if="!menuReduced">Planification</span> {{ mapSelected !== "planner" ? "🗺️" : "🚫" }}
       </button>
-    </div>
+    </DraggableResizable>
   </div>
 </template>

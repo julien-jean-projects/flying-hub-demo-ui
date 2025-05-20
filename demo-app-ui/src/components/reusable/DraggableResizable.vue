@@ -3,17 +3,26 @@ import { ref, reactive, withDefaults, watch } from "vue";
 import { useDraggable, useEventListener, useMousePressed } from "@vueuse/core";
 
 interface Props {
+  initialPosition?: { x: number; y: number };
   initialWidth?: number;
   initialHeight?: number;
   resize?: boolean;
+  heightAuto?: boolean;
+  contentClasses?: string;
 }
-const props = withDefaults(defineProps<Props>(), { initialWidth: 30, initialHeight: 40, resize: false });
+const props = withDefaults(defineProps<Props>(), {
+  initialPosition: () => ({ x: 100, y: 100 }),
+  initialWidth: 30,
+  initialHeight: 40,
+  resize: false,
+  contentClasses: "p-4",
+});
 
 const containerRef = ref<HTMLElement | null>(null);
 const handleRef = ref<HTMLElement | null>(null);
 const dimensions = reactive({ width: props.initialWidth, height: props.initialHeight });
 const resizeState = reactive({ isResizing: false, startX: 0, startY: 0, startWidth: 0, startHeight: 0 });
-const position = reactive({ x: 100, y: 100 });
+const position = reactive({ x: props.initialPosition.x, y: props.initialPosition.y });
 
 const { isDragging } = useDraggable(containerRef, {
   handle: handleRef,
@@ -69,7 +78,7 @@ watch(
     ]"
     :style="{
       width: dimensions.width + 'vw',
-      height: dimensions.height + 'vh',
+      ...(props.heightAuto ? {} : { height: dimensions.height + 'vh' }),
       top: position.y + 'px',
       left: position.x + 'px',
     }"
@@ -86,7 +95,7 @@ watch(
 
     <!-- Content -->
     <div class="flex flex-col h-[calc(100%-2.5rem)]">
-      <div class="p-4 overflow-auto grow">
+      <div class="overflow-auto grow" :class="props.contentClasses">
         <slot />
       </div>
     </div>

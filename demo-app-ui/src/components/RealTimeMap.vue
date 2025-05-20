@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import type { ComponentPublicInstance } from "vue";
+import DraggableResizable from "./reusable/DraggableResizable.vue";
 import CesiumMap from "./CesiumMap.vue";
 import { useMQTTStore } from "../stores/useMQTTStore";
 import type { IComponentCesiumMapExpose } from "../types/CesiumMap";
@@ -87,13 +88,17 @@ onUnmounted(() => {
   <div v-show="!hideMap">
     <CesiumMap ref="cesiumMapRef" />
 
-    <div class="absolute top-2.5 left-2.5 z-50 flex flex-col gap-2 min-w-40">
+    <DraggableResizable class="max-w-[170px]" content-classes="flex flex-col gap-2">
+      <template #header>
+        <span>Shortcuts</span>
+      </template>
+
       <button
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        class="w-full p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="cesiumMapRef?.focusOnCesiumEntityById('5e6087eb1b2dc')"
       >
         🔍 Go to Waypoint 5
       </button>
-    </div>
+    </DraggableResizable>
   </div>
 </template>
