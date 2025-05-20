@@ -22,6 +22,15 @@ export function initMQTT(): Promise<mqtt.MqttClient> {
   });
 }
 
+export function disconnectMQTT() {
+  if (client) {
+    client.end(true, () => {
+      console.log("[MQTT] Disconnected from broker");
+      client = null;
+    });
+  }
+}
+
 export function subscribe(topic: string, callback: (payload: any) => void) {
   if (!client) {
     throw new Error("MQTT not initialized. Call initMQTT() first.");
@@ -52,4 +61,16 @@ export function subscribe(topic: string, callback: (payload: any) => void) {
     client?.off("message", handler);
     client?.unsubscribe(topic);
   };
+}
+
+export function unsubscribe(topic: string) {
+  if (!client) return;
+
+  client.unsubscribe(topic, (err) => {
+    if (err) {
+      console.error(`[MQTT] Failed to unsubscribe from ${topic}`, err);
+    } else {
+      console.log(`[MQTT] Unsubscribed from ${topic}`);
+    }
+  });
 }

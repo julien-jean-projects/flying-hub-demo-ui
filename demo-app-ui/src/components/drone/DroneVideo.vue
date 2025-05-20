@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { initMQTT, subscribe } from "../../services/mqttService";
+import { onMounted, onUnmounted, ref } from "vue";
+import { useMQTTStore } from "../../stores/useMQTTStore";
 import type { Telemetry } from "../../types/Telemetry";
+
+const mqttStore = useMQTTStore();
+const { unsubscribeMQTT, subscribeMQTT } = mqttStore;
 
 const emit = defineEmits<{
   (event: "take-off"): void;
@@ -22,24 +25,34 @@ function takeOff() {
 }
 
 onMounted(async () => {
-  await initMQTT();
+  await subscribeMQTT();
 
-  subscribe("drone/video", (data) => {
+  mqttStore.getEventCallback("drone/video", (data: { url: string }) => {
     if (videoRef.value) {
-      videoRef.value.src = `${apiUrl}${data.url}`;
-      videoRef.value.play();
-
+      // fix DOMException error
+      const newSrc = `${apiUrl}${data.url}`;
+      if (videoRef.value.src !== newSrc) {
+        videoRef.value.src = newSrc;
+        videoRef.value.play().catch(() => {});
+      } else {
+        videoRef.value.currentTime = 0;
+        videoRef.value.play().catch(() => {});
+      }
       videoRef.value.addEventListener("ended", () => {
         emit("recording-finished");
       });
     }
   });
 
-  subscribe("drone/telemetry", (data: Telemetry) => {
+  mqttStore.getEventCallback("drone/telemetry", (data: Telemetry) => {
     if (data.gps) {
       if (!isTakeOff.value) takeOff();
     }
   });
+});
+
+onUnmounted(() => {
+  unsubscribeMQTT();
 });
 </script>
 

@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { reactive, computed, onMounted } from "vue";
-import { initMQTT, subscribe } from "../../services/mqttService";
+import { reactive, computed, onMounted, onUnmounted } from "vue";
+import { useMQTTStore } from "../../stores/useMQTTStore";
 import type { Telemetry } from "../../types/Telemetry";
+
+const mqttStore = useMQTTStore();
+const { unsubscribeMQTT, subscribeMQTT } = mqttStore;
 
 const telemetry = reactive<Telemetry>({});
 
@@ -12,14 +15,20 @@ const formattedGPS = computed(() => {
 
 const formattedGimbal = computed(() => {
   if (!telemetry.gimbal) return "--";
-  return `yaw ${telemetry.gimbal.yaw}°, pitch ${telemetry.gimbal.pitch}°`;
+  const { yaw, pitch, fov } = telemetry.gimbal;
+  return `yaw ${yaw}°, pitch ${pitch}°, FOV ${fov}°`;
 });
 
 onMounted(async () => {
-  await initMQTT();
-  subscribe("drone/telemetry", (data: Telemetry) => {
+  await subscribeMQTT();
+
+  mqttStore.getEventCallback("drone/telemetry", (data: Telemetry) => {
     Object.assign(telemetry, data);
   });
+});
+
+onUnmounted(() => {
+  unsubscribeMQTT();
 });
 </script>
 

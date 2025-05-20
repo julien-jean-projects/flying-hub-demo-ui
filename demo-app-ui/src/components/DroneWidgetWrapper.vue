@@ -11,7 +11,7 @@ const handleRecordFinished = () => (isRecording.value = false);
 </script>
 
 <template>
-  <DraggableResizable :initial-width="25" resize>
+  <DraggableResizable :initial-width="25" :initial-height="55" resize>
     <template #header>
       <span class="font-semibold text-sm"
         >Drone <span v-show="isRecording" class="text-red-500 rounded px-1">(Live) 🛑</span></span

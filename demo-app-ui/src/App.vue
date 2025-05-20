@@ -1,19 +1,15 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
+import { ref } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
-import type { ComponentPublicInstance } from "vue";
-import type { IComponentCesiumMapExpose } from "./types/CesiumMap";
-
-import CesiumMap from "./components/CesiumMap.vue";
+import RealTimeMap from "./components/RealTimeMap.vue";
 import DroneWidgetWrapper from "./components/DroneWidgetWrapper.vue";
-import { waypointsData } from "./data/waypoints";
-import { subscribe } from "./services/mqttService";
-import type { Telemetry } from "./types/Telemetry";
+import DroneMapManager from "./components/DroneMapManager.vue";
+import FlightPlanner from "./components/FlightPlanner.vue";
+import DraggableResizable from "./components/reusable/DraggableResizable.vue";
 
-const cesiumMapRef = ref<ComponentPublicInstance<IComponentCesiumMapExpose> | null>(null);
-const hideCamera = ref<boolean>(false);
-const hideMap = ref<boolean>(false);
-const waypointsInterval = ref<ReturnType<typeof setInterval> | undefined>();
+const hideCamera = ref<boolean>(true);
+const mapSelected = ref<null | "realtime" | "drone" | "planner">(null);
+const menuReduced = ref(true);
 
 const isDark = useDark({
   selector: "html",
@@ -24,98 +20,79 @@ const isDark = useDark({
 
 const toggleDark = useToggle(isDark);
 const toggleCamera = () => (hideCamera.value = !hideCamera.value);
-const toggleMap = () => (hideMap.value = !hideMap.value);
-
-function initWaypointsDrone() {
-  cesiumMapRef.value?.updateDronePoseAndCamera({
-    id: "705694ff7c7aafb",
-    lon: 2.36145,
-    lat: 48.8592121,
-    alt: 154,
-    gimbal: { yaw: -70, pitch: -10 },
-  });
-
-  cesiumMapRef.value?.addWaypoint({
-    id: "9",
-    lon: 2.4,
-    lat: 48.85,
-    alt: 100,
-    gimbal: { yaw: 90, pitch: -10 },
-  });
-
-  let index = 0;
-  cesiumMapRef.value?.addWaypoint(waypointsData[index], true);
-  index++;
-
-  waypointsInterval.value = setInterval(() => {
-    if (index >= waypointsData.length) {
-      clearInterval(waypointsInterval.value);
-      return;
-    }
-    cesiumMapRef.value?.addWaypoint(waypointsData[index]);
-
-    index++;
-  }, 1000);
-}
-
-onMounted(() => {
-  initWaypointsDrone();
-
-  subscribe("drone/telemetry", (data: Telemetry) => {
-    if (data.gps) {
-      console.log(data.gps.lat, data.gps.lon, data.altitude);
-
-      cesiumMapRef.value?.updateDronePoseAndCamera({
-        id: "705694ff7c7aafb",
-        lon: data.gps.lon,
-        lat: data.gps.lat,
-        alt: data.altitude ?? 0,
-        gimbal: { yaw: data.gimbal?.yaw ?? 0, pitch: data.gimbal?.pitch ?? 0 },
-      });
-    }
-  });
-});
-
-onUnmounted(() => {
-  clearInterval(waypointsInterval.value);
-});
+const toggleMap = () => {
+  mapSelected.value = mapSelected.value === "realtime" ? null : "realtime";
+};
+const toggleDroneManager = () => {
+  mapSelected.value = mapSelected.value === "drone" ? null : "drone";
+};
+const toggleFlightPlanner = () => {
+  mapSelected.value = mapSelected.value === "planner" ? null : "planner";
+};
+const toggleMenuReduced = () => (menuReduced.value = !menuReduced.value);
 </script>
 
 <template>
   <div class="w-full h-screen overflow-hidden">
-    <CesiumMap ref="cesiumMapRef" v-show="!hideMap" />
+    <RealTimeMap v-show="mapSelected === 'realtime'" />
+    <DroneMapManager v-show="mapSelected === 'drone'" />
+    <FlightPlanner v-show="mapSelected === 'planner'" />
 
-    <DroneWidgetWrapper v-show="!hideCamera" />
+    <DroneWidgetWrapper v-show="!hideCamera" class="z-50" />
 
-    <div class="absolute bottom-2.5 right-2.5 z-50 flex flex-col gap-2 min-w-40">
+    <DraggableResizable
+      :class="[menuReduced ? 'max-w-[40px]' : 'max-w-[200px]', 'z-100']"
+      content-classes="flex flex-col gap-2"
+      :initial-position="{ x: 0, y: 0 }"
+      height-auto
+    >
+      <template #header>
+        <span v-if="!menuReduced" class="w-full text-center font-bold uppercase"> Draggable Menu </span>
+        <div v-else class="h-2"></div>
+      </template>
+
       <button
-        v-show="!hideMap"
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
-        @click="cesiumMapRef?.focusOnWaypointById('5')"
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        @click="toggleMenuReduced()"
       >
-        🔍 Go to Waypoint 5
+        <span v-if="!menuReduced">Réduire</span>
+        <span class="font-bold px-1"> ☰</span>
       </button>
 
       <button
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleDark()"
       >
-        Switch to {{ !isDark ? "🌙" : "☀️" }}
+        <span v-if="!menuReduced">Thème</span> {{ !isDark ? "🌙" : "☀️" }}
       </button>
 
       <button
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleCamera()"
       >
-        {{ hideCamera ? "🎥 Show Camera" : "📹 Hide Camera" }}
+        <span v-if="!menuReduced">Telemetrie(Camera)</span> {{ hideCamera ? "🎥" : "🚫" }}
       </button>
 
       <button
-        class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleMap()"
       >
-        {{ hideMap ? "👁️ Show Map" : "🚫 Hide Map" }}
+        <span v-if="!menuReduced">Realtime Map</span> {{ mapSelected !== "realtime" ? "👁️" : "🚫" }}
       </button>
-    </div>
+
+      <button
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        @click="toggleDroneManager()"
+      >
+        <span v-if="!menuReduced">Gestion drones</span> {{ mapSelected !== "drone" ? "🛩️ " : "🚫" }}
+      </button>
+
+      <button
+        class="border text-right p-2 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
+        @click="toggleFlightPlanner()"
+      >
+        <span v-if="!menuReduced">Planification</span> {{ mapSelected !== "planner" ? "🗺️" : "🚫" }}
+      </button>
+    </DraggableResizable>
   </div>
 </template>
