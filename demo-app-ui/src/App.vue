@@ -7,9 +7,7 @@ import DroneMapManager from "./components/DroneMapManager.vue";
 import FlightPlanner from "./components/FlightPlanner.vue";
 
 const hideCamera = ref<boolean>(true);
-const hideMap = ref<boolean>(true);
-const hideDroneManager = ref<boolean>(true);
-const hideFlightPlanner = ref<boolean>(true);
+const mapSelected = ref<null | "realtime" | "drone" | "planner">(null);
 
 const isDark = useDark({
   selector: "html",
@@ -21,29 +19,23 @@ const isDark = useDark({
 const toggleDark = useToggle(isDark);
 const toggleCamera = () => (hideCamera.value = !hideCamera.value);
 const toggleMap = () => {
-  hideDroneManager.value = true;
-  hideFlightPlanner.value = true;
-  hideMap.value = !hideMap.value;
+  mapSelected.value = mapSelected.value === "realtime" ? null : "realtime";
 };
 const toggleDroneManager = () => {
-  hideMap.value = true;
-  hideFlightPlanner.value = true;
-  hideDroneManager.value = !hideDroneManager.value;
+  mapSelected.value = mapSelected.value === "drone" ? null : "drone";
 };
 const toggleFlightPlanner = () => {
-  hideMap.value = true;
-  hideDroneManager.value = true;
-  hideFlightPlanner.value = !hideFlightPlanner.value;
+  mapSelected.value = mapSelected.value === "planner" ? null : "planner";
 };
 </script>
 
 <template>
   <div class="w-full h-screen overflow-hidden">
-    <RealTimeMap :hide-map="hideMap" />
+    <RealTimeMap v-show="mapSelected === 'realtime'" />
+    <DroneMapManager v-show="mapSelected === 'drone'" />
+    <FlightPlanner v-show="mapSelected === 'planner'" />
 
-    <DroneWidgetWrapper v-show="!hideCamera" />
-    <DroneMapManager v-show="!hideDroneManager" />
-    <FlightPlanner v-show="!hideFlightPlanner" />
+    <DroneWidgetWrapper v-show="!hideCamera" class="z-50" />
 
     <div class="absolute bottom-2.5 right-2.5 z-50 flex flex-col gap-2 min-w-40">
       <button
@@ -64,21 +56,21 @@ const toggleFlightPlanner = () => {
         class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleMap()"
       >
-        {{ hideMap ? "👁️ Show Map" : "🚫 Hide Map" }}
+        {{ mapSelected !== "realtime" ? "👁️ Show Map" : "🚫 Hide Map" }}
       </button>
 
       <button
         class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleDroneManager()"
       >
-        {{ hideDroneManager ? "🛩️ Gérer les drones" : "🚫 Fermer gestion drones" }}
+        {{ mapSelected !== "drone" ? "🛩️ Gérer les drones" : "🚫 Fermer gestion drones" }}
       </button>
 
       <button
         class="w-full border p-4 cursor-pointer rounded-md transition text-white bg-sky-900 hover:bg-sky-700"
         @click="toggleFlightPlanner()"
       >
-        {{ hideFlightPlanner ? "🗺️ Planifier un vol" : "🚫 Fermer planification" }}
+        {{ mapSelected !== "planner" ? "🗺️ Planifier un vol" : "🚫 Fermer planification" }}
       </button>
     </div>
   </div>
